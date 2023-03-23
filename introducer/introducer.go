@@ -5,15 +5,16 @@ import (
 	"math/rand"
 	"net"
 	"net/rpc"
-	"ridehost/types"
+	"os"
+	. "ridehost/types"
 	"strconv"
 	"time"
 )
 
 var ip net.IP
-var numClusterNodes = 0
 var ports = map[string]int{"introducer": 2233,
-	"clusterNode": 2234}
+				"clusterNode": 2234}
+var cluseringNodes []string // TODO can hard code these for now
 
 type AcceptClient bool
 
@@ -33,14 +34,37 @@ func main() {
 }
 
 // RPC exectued by introducer when new joins occur
-func (a *AcceptClient) clientJoin(request types.AcceptClientRequest, response *types.AcceptClientResponse) error {
+func (a *AcceptClient) clientJoin(request ClientIntroducerRequest, response *ClientIntroducerResponse) error {
+	// TODO make go routine
 	// take the request of the cliient
 
-	// forward request to crandom lsuter node to kmeans
+	// randomly chose clusteringNode to forward request to
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)
-	clusterNum := r.Intn(numClusterNodes)
+	clusterNum := r.Intn(len(cluseringNodes))
 
-	// get clsuter group back from cluster node
+	// RPC to clusterNum for kmeans
+	clusterResponse := sendClusteringRPC(clusterNum, IntroducerClusterRequest{request.Uuid,
+		request.Lat,
+		request.Lng}) // get assinged clsuter group back
+
 	// give repsonse to client
+	*response = ClientIntroducerResponse{clusterResponse.ClusterNum, clusterResponse.Error}
+
+	return nil
+}
+
+func sendClusteringRPC(clusterNum int, request IntroducerClusterRequest) IntroducerClusterResponse {
+	conn, err := net.Dial("tcp", cluseringNodes[clusterNum])
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+
+	client := rpc.NewClient(conn)
+	clusterResponse := new(IntroducerClusterResponse)
+	promise := client.Go("ClusteringNodeMembershipList.findClusterInfo", request, &clusterResponse, nil)
+	// wait for RPC to finish
+	<-promise.Done
+	return *clusterResponse
 }

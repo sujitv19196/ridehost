@@ -8,7 +8,7 @@ const (
 	Stationary NodeType = 2
 )
 
-type AcceptClientRequest struct {
+type ClientIntroducerRequest struct {
 	RequestType  NodeType
 	IntroducerIP string
 	Uuid         [16]byte
@@ -16,22 +16,20 @@ type AcceptClientRequest struct {
 	Lng          float64
 }
 
-type AcceptClientResponse struct {
+type ClientIntroducerResponse struct {
 	ClusterNum int
 	Error      error
 }
 
-type AcceptClientFromIntroducerRequest struct {
-	RequestType  NodeType
-	IntroducerIP string
-	DataList     []string
-	Uuid         [16]byte
-	Lat          float64
-	Lng          float64
+type IntroducerClusterRequest struct {
+	Uuid [16]byte
+	Lat  float64
+	Lng  float64
 }
 
-type AcceptClientFromIntroducerResponse struct {
+type IntroducerClusterResponse struct {
 	ClusterNum int
+	Result     string //json
 	Error      error
 	Message    string
 }

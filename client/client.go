@@ -7,10 +7,10 @@ import (
 	. "ridehost/types"
 )
 
-type Response AcceptClientResponse
+type Response ClientIntroducerResponse
 
 // command called by a client to join the system
-func joinSystem(request AcceptClientRequest) Response {
+func joinSystem(request ClientIntroducerRequest) Response {
 	// request to introducer
 	conn, err := net.Dial("tcp", request.IntroducerIP)
 	if err != nil {
@@ -19,9 +19,8 @@ func joinSystem(request AcceptClientRequest) Response {
 	}
 
 	client := rpc.NewClient(conn)
-	// take grep args from command line
 	response := new(Response)
-	promise := client.Go("Response.clientJoin", request, &response, nil)
+	promise := client.Go("AcceptClient.clientJoin", request, &response, nil)
 	// wait for RPC to finish
 	<-promise.Done
 	return *response

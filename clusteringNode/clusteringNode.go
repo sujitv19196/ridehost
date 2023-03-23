@@ -30,20 +30,24 @@ func main() {
 	// go rpc.ServeConn(conn)
 }
 
-// cluster node accepts an RPC call from client node,
-// get the cluster using the kmeans clustering function and return.
-func (s *AcceptClientFromIntroducer) findClusterInfo(request AcceptClientFromIntroducer, response *AcceptClientFromIntroducerResponse) error {
-
-	s.DataList = append(s.DataList, data.Value)
-
-	result := kMeansClustering(request.Uuid, request.Lat, request.Lng)
-	response.ClusterNum = result.clusterNum
-	response.Message = ""
-	return nil
-
+type ClusteringNodeMembershipList struct {
+	MembershipList []string
 }
 
-func kMeansClustering(string uuid, float lat, float lng) int {
+// cluster node accepts an RPC call from client node,
+// get the cluster using the kmeans clustering function and return.
+func (s *ClusteringNodeMembershipList) findClusterInfo(request IntroducerClusterRequest, response *IntroducerClusterResponse) error {
+
+	s.MembershipList = append(s.MembershipList, string(request.Uuid[:]))
+	result := kMeansClustering(s)
+	response.Result = result
+	response.Message = ""
+	return nil
+}
+
+func kMeansClustering(member *ClusteringNodeMembershipList) []string {
 	// Perform some operation here
-	return lat
+	memberList := member.MembershipList
+
+	return memberList
 }
