@@ -1,4 +1,4 @@
-package client
+package main
 
 import (
 	"fmt"
@@ -14,8 +14,10 @@ import (
 type Response ClientIntroducerResponse
 
 func main() {
+	fmt.Println(len(os.Args))
 	if len(os.Args) != 5 {
 		fmt.Println("format: ./client nodeType introducerIp lat lng")
+		os.Exit(1)
 	}
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])

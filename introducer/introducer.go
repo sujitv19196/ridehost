@@ -1,4 +1,4 @@
-package introducer
+package main
 
 import (
 	"log"
@@ -34,7 +34,7 @@ func main() {
 }
 
 // RPC exectued by introducer when new joins occur
-func (a *AcceptClient) clientJoin(request ClientIntroducerRequest, response *ClientIntroducerResponse) error {
+func (a *AcceptClient) ClientJoin(request ClientIntroducerRequest, response *ClientIntroducerResponse) error {
 	// TODO make go routine
 	// take the request of the cliient
 
