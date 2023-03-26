@@ -10,7 +10,6 @@ import (
 
 var ip net.IP
 var numClusterNodes = 0
-var ports = map[string]int{"cluster": 2233, "clusterNode": 2234}
 
 var MembershipList = []string{}
 
@@ -18,7 +17,7 @@ type AcceptClientFromIntroducer bool
 
 func main() {
 	// get this machine's IP address
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(ports["cluster"]))
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["clusteringNode"]))
 	if err != nil {
 		log.Fatal(err)
 	}

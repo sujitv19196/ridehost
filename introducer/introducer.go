@@ -12,15 +12,13 @@ import (
 )
 
 var ip net.IP
-var ports = map[string]int{"introducer": 2233,
-						"clusterNode": 2234}
-var cluseringNodes = []string{"localhost:2234"} // TODO can hard code these for now
+var cluseringNodes = []string{"172.22.153.8:2234"} // TODO can hard code these for now
 
 type AcceptClient bool
 
 func main() {
 	// get this machine's IP address
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(ports["introducer"]))
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["introducer"]))
 	if err != nil {
 		log.Fatal(err)
 	}
