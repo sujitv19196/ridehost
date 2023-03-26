@@ -35,7 +35,6 @@ func main() {
 // cluster node accepts an RPC call from client node,
 // get the cluster using the kmeans clustering function and return.
 func (a *AcceptClientFromIntroducer) FindClusterInfo(request IntroducerClusterRequest, response *IntroducerClusterResponse) error {
-
 	fmt.Println("request from: ", request.Uuid)
 	MembershipList = append(MembershipList, string(request.Uuid[:]))
 	// wait 1 minute

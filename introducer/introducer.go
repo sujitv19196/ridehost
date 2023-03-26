@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -56,7 +57,7 @@ func (a *AcceptClient) ClientJoin(request ClientIntroducerRequest, response *Cli
 
 	// give repsonse to client
 	*response = ClientIntroducerResponse{ClusterNum: clusterResponse.ClusterNum, Error: clusterResponse.Error}
-
+	fmt.Println(response.ClusterNum)
 	return nil
 }
 
