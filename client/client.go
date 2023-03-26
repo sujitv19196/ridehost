@@ -39,7 +39,7 @@ func joinSystem(request ClientIntroducerRequest) Response {
 
 	client := rpc.NewClient(conn)
 	response := new(Response)
-	promise := client.Go("AcceptClient.clientJoin", request, &response, nil)
+	promise := client.Go("AcceptClient.ClientJoin", request, &response, nil)
 	// wait for RPC to finish
 	<-promise.Done
 	return *response
