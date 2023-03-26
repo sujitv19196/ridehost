@@ -1,4 +1,4 @@
-package clusterNode
+package main
 
 import (
 	"log"
@@ -11,6 +11,8 @@ import (
 var ip net.IP
 var numClusterNodes = 0
 var ports = map[string]int{"cluster": 2233, "clusterNode": 2234}
+
+var MembershipList = []string{}
 
 type AcceptClientFromIntroducer bool
 
@@ -30,24 +32,20 @@ func main() {
 	// go rpc.ServeConn(conn)
 }
 
-type ClusteringNodeMembershipList struct {
-	MembershipList []string
-}
-
 // cluster node accepts an RPC call from client node,
 // get the cluster using the kmeans clustering function and return.
-func (s *ClusteringNodeMembershipList) findClusterInfo(request IntroducerClusterRequest, response *IntroducerClusterResponse) error {
+func (a *AcceptClientFromIntroducer) FindClusterInfo(request IntroducerClusterRequest, response *IntroducerClusterResponse) error {
 
-	s.MembershipList = append(s.MembershipList, string(request.Uuid[:]))
-	result := kMeansClustering(s)
-	response.Result = result[0] //TODO
-	response.Message = ""
+	MembershipList = append(MembershipList, string(request.Uuid[:]))
+	// wait 1 minute
+	result := kMeansClustering()
+	response.Result = strconv.Itoa(result["test"])
+	response.Message = "TestMsg"
 	return nil
 }
 
-func kMeansClustering(member *ClusteringNodeMembershipList) []string {
-	// Perform some operation here
-	memberList := member.MembershipList
+func kMeansClustering() map[string]int {
+	// TODO Perform some operation here
 
-	return memberList
+	return map[string]int{"test": 0}
 }

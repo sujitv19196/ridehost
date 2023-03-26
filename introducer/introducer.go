@@ -13,8 +13,8 @@ import (
 
 var ip net.IP
 var ports = map[string]int{"introducer": 2233,
-				"clusterNode": 2234}
-var cluseringNodes []string // TODO can hard code these for now
+						"clusterNode": 2234}
+var cluseringNodes = []string{"localhost:2234"} // TODO can hard code these for now
 
 type AcceptClient bool
 
@@ -63,7 +63,7 @@ func sendClusteringRPC(clusterNum int, request IntroducerClusterRequest) Introdu
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(IntroducerClusterResponse)
-	promise := client.Go("ClusteringNodeMembershipList.findClusterInfo", request, &clusterResponse, nil)
+	promise := client.Go("ClusteringNodeMembershipList.FindClusterInfo", request, &clusterResponse, nil)
 	// wait for RPC to finish
 	<-promise.Done
 	return *clusterResponse

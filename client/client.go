@@ -14,7 +14,6 @@ import (
 type Response ClientIntroducerResponse
 
 func main() {
-	fmt.Println(len(os.Args))
 	if len(os.Args) != 5 {
 		fmt.Println("format: ./client nodeType introducerIp lat lng")
 		os.Exit(1)
@@ -25,7 +24,7 @@ func main() {
 	lng, _ := strconv.ParseFloat(os.Args[4], 64)
 	req := ClientIntroducerRequest{RequestType: nodeType, IntroducerIP: os.Args[2], Uuid: uuid, Lat: lat, Lng: lng}
 	r := joinSystem(req)
-	fmt.Println(r.ClusterNum)
+	fmt.Println("Cluster_Num:", r.ClusterNum)
 }
 
 // command called by a client to join the system
