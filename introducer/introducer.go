@@ -44,12 +44,12 @@ func (a *AcceptClient) clientJoin(request ClientIntroducerRequest, response *Cli
 	clusterNum := r.Intn(len(cluseringNodes))
 
 	// RPC to clusterNum for kmeans
-	clusterResponse := sendClusteringRPC(clusterNum, IntroducerClusterRequest{request.Uuid,
-		request.Lat,
-		request.Lng}) // get assinged clsuter group back
+	clusterResponse := sendClusteringRPC(clusterNum, IntroducerClusterRequest{Uuid: request.Uuid,
+		Lat: request.Lat,
+		Lng: request.Lng}) // get assinged clsuter group back
 
 	// give repsonse to client
-	*response = ClientIntroducerResponse{clusterResponse.ClusterNum, clusterResponse.Error}
+	*response = ClientIntroducerResponse{ClusterNum: clusterResponse.ClusterNum, Error: clusterResponse.Error}
 
 	return nil
 }

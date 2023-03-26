@@ -1,15 +1,13 @@
 package types
 
-type NodeType int
-
 const (
-	Driver     NodeType = 0
-	Rider      NodeType = 1
-	Stationary NodeType = 2
+	Driver     int = 0
+	Rider      int = 1
+	Stationary int = 2
 )
 
 type ClientIntroducerRequest struct {
-	RequestType  NodeType
+	RequestType  int
 	IntroducerIP string
 	Uuid         [16]byte
 	Lat          float64

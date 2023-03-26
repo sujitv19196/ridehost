@@ -40,7 +40,7 @@ func (s *ClusteringNodeMembershipList) findClusterInfo(request IntroducerCluster
 
 	s.MembershipList = append(s.MembershipList, string(request.Uuid[:]))
 	result := kMeansClustering(s)
-	response.Result = result
+	response.Result = result[0] //TODO
 	response.Message = ""
 	return nil
 }
