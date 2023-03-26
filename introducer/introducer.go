@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	. "ridehost/constants"
 	. "ridehost/types"
 	"strconv"
 	"time"
@@ -42,9 +43,7 @@ func main() {
 
 // RPC exectued by introducer when new joins occur
 func (a *AcceptClient) ClientJoin(request ClientIntroducerRequest, response *ClientIntroducerResponse) error {
-	// TODO make go routine
-	// take the request of the cliient
-
+	// take the requests of the cliient and imediately send to a clusteringNode
 	// randomly chose clusteringNode to forward request to
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)

@@ -1,7 +1,5 @@
 package types
 
-var Ports = map[string]int{"introducer": 2233, "clusteringNode": 2234}
-
 const (
 	Driver     int = 0
 	Rider      int = 1
