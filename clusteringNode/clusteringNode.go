@@ -62,7 +62,7 @@ func (a *AcceptClientFromIntroducer) FindClusterInfo(request IntroducerClusterRe
 	fmt.Println("request from: ", request.Uuid)
 	ML.Append(string(request.Uuid[:]))
 	// wait for Kmeans to finish
-	response.Result = strconv.Itoa(0) // for testing only
+	response.ClusterNum = 4 // for testing only
 	response.Message = "TestMsg"
 	return nil
 }

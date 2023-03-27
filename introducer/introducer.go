@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -14,7 +13,7 @@ import (
 )
 
 var ip net.IP
-var cluseringNodes = []string{"172.22.153.8:2234"} // TODO can hard code these for now
+var cluseringNodes = []string{"localhost:2234"} // TODO can hard code these for now
 
 type AcceptClient bool
 
@@ -38,7 +37,7 @@ func main() {
 
 	// // give repsonse to client
 	// r := ClientIntroducerResponse{ClusterNum: clusterResponse.ClusterNum, Error: clusterResponse.Error}
-	// fmt.Println(r)
+	// fmt.Println(r.ClusterNum)
 }
 
 // RPC exectued by introducer when new joins occur
@@ -56,7 +55,6 @@ func (a *AcceptClient) ClientJoin(request ClientIntroducerRequest, response *Cli
 
 	// give repsonse to client
 	*response = ClientIntroducerResponse{ClusterNum: clusterResponse.ClusterNum, Error: clusterResponse.Error}
-	fmt.Println(response.ClusterNum)
 	return nil
 }
 
@@ -69,8 +67,8 @@ func sendClusteringRPC(clusterNum int, request IntroducerClusterRequest) Introdu
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(IntroducerClusterResponse)
-	promise := client.Go("ClusteringNodeMembershipList.FindClusterInfo", request, &clusterResponse, nil)
-	// wait for RPC to finish
-	<-promise.Done
+	if client.Call("ClusteringNodeMembershipList.FindClusterInfo", request, &clusterResponse) != nil {
+		log.Fatal("FindClusterInfo error: ", err)
+	}
 	return *clusterResponse
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/rpc"
 	"os"
@@ -38,9 +39,10 @@ func joinSystem(request ClientIntroducerRequest) Response {
 
 	client := rpc.NewClient(conn)
 	response := new(Response)
-	promise := client.Go("AcceptClient.ClientJoin", request, &response, nil)
-	// wait for RPC to finish
-	<-promise.Done
+	err = client.Call("AcceptClient.ClientJoin", request, &response)
+	if err != nil {
+		log.Fatal("ClientJoin error: ", err)
+	}
 	return *response
 }
 
