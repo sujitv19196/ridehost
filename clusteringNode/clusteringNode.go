@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 	. "ridehost/constants"
 	. "ridehost/kmeansclustering"
 	. "ridehost/types"
@@ -26,6 +27,8 @@ func (m *MembershipList) Append(elem Node) {
 var ip net.IP
 var numClusterNodes = 0
 var ML MembershipList
+
+var mainClustererIp = "localhost:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 
 type ClusteringNodeRPC bool
 
@@ -53,7 +56,6 @@ func acceptConnections() {
 func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClustererClusteringNodeResponse) error {
 	fmt.Println("request from: ", request.NodeRequest.Uuid)
 	ML.Append(request.NodeRequest)
-	// wait for Kmeans to finish
 	response.Message = "ACK"
 	return nil
 }
@@ -78,5 +80,25 @@ func kMeansClustering() map[string]int {
 	CentralizedKMeansClustering(ML.List, NumClusters)
 
 	// clear membership list
+
+	// RPC call
+	// sendCoreset()
 	return map[string]int{"test": 0}
+}
+
+// calls MainClustererRPC.RecvCoreset to give it computed coreset
+func sendCoreset(coreset Coreset) {
+	conn, err := net.Dial("tcp", mainClustererIp)
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+
+	client := rpc.NewClient(conn)
+	clusterResponse := new(MainClustererClusteringNodeResponse)
+
+	// send clustering request to clusterNum clustering Node
+	if client.Call("MainClustererRPC.RecvCoreset", coreset, &clusterResponse) != nil {
+		log.Fatal("MainClustererRPC.RecvCoreset error: ", err)
+	}
 }
