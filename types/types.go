@@ -1,33 +1,51 @@
 package types
 
+import "net"
+
 const (
-	Driver     int = 0
-	Rider      int = 1
-	Stationary int = 2
+	Driver  int = 0
+	Rider   int = 1
+	Cluster int = 2
 )
 
-type ClientIntroducerRequest struct {
-	RequestType  int
-	IntroducerIP string
-	Uuid         [16]byte
-	Lat          float64
-	Lng          float64
+type Node struct {
+	NodeType int
+	Ip       *net.TCPAddr
+	Uuid     [16]byte
+	Lat      float64
+	Lng      float64
+}
+
+type JoinRequest struct {
+	NodeRequest  Node
+	IntroducerIp string
 }
 
 type ClientIntroducerResponse struct {
-	ClusterNum int
-	Error      error
+	Message string
+	Error   error
 }
 
-type IntroducerClusterRequest struct {
-	Uuid [16]byte
-	Lat  float64
-	Lng  float64
+type IntroducerMainClustererResponse struct {
+	Message string
+	Error   error
 }
 
-type IntroducerClusterResponse struct {
+type MainClustererClusteringNodeResponse struct {
+	Message string
+	Error   error
+}
+
+type Coreset struct {
+	coreset map[string]int //TODO change, placeholder
+}
+
+type ClusterInfo struct {
+	ClusterRep string
 	ClusterNum int
-	Result     string //json
-	Error      error
-	Message    string
+}
+
+type ClientMainClustererResponse struct {
+	Message string
+	Error   error
 }
