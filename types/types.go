@@ -31,3 +31,21 @@ type IntroducerClusterResponse struct {
 	Error      error
 	Message    string
 }
+
+type ClientClusterJoinRequest struct {
+	ClusterNum   int
+	ClusterRepIP string
+	Members      []string
+}
+
+type ClientClusterJoinResponse struct {
+	Ack bool
+}
+
+type ClusterNodeRemovalRequest struct {
+	NodeIP string
+}
+
+type ClusterNodeRemovalResponse struct {
+	Ack bool
+}
