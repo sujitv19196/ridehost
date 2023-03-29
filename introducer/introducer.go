@@ -2,20 +2,18 @@ package main
 
 import (
 	"log"
-	"math/rand"
 	"net"
 	"net/rpc"
 	"os"
 	. "ridehost/constants"
 	. "ridehost/types"
 	"strconv"
-	"time"
 )
 
 var ip net.IP
-var cluseringNodes = []string{"localhost:2234"} // TODO can hard code these for now
+var mainClustererIp = "localhost:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 
-type AcceptClient bool
+type IntroducerRPC bool
 
 func main() {
 	// get this machine's IP address
@@ -23,8 +21,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	acceptClient := new(AcceptClient)
-	rpc.Register(acceptClient)
+	introducerRPC := new(IntroducerRPC)
+	rpc.Register(introducerRPC)
 	conn, err := net.ListenTCP("tcp", address)
 	if err != nil {
 		log.Fatal("listen error:", err)
@@ -41,34 +39,24 @@ func main() {
 }
 
 // RPC exectued by introducer when new joins occur
-func (a *AcceptClient) ClientJoin(request ClientIntroducerRequest, response *ClientIntroducerResponse) error {
-	// take the requests of the cliient and imediately send to a clusteringNode
-	// randomly chose clusteringNode to forward request to
-	seed := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(seed)
-	clusterNum := r.Intn(len(cluseringNodes))
-
-	// RPC to clusterNum for kmeans
-	clusterResponse := sendClusteringRPC(clusterNum, IntroducerClusterRequest{Uuid: request.Uuid,
-		Lat: request.Lat,
-		Lng: request.Lng}) // get assinged clsuter group back
-
-	// give repsonse to client
-	*response = ClientIntroducerResponse{ClusterNum: clusterResponse.ClusterNum, Error: clusterResponse.Error}
+func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroducerResponse) error {
+	// take the requests of the cliient and imediately send to mainClusterer
+	go forwardRequestToMainClusterer(request)
+	response.Message = "ACK"
+	// TODO add error?
 	return nil
 }
 
-func sendClusteringRPC(clusterNum int, request IntroducerClusterRequest) IntroducerClusterResponse {
-	conn, err := net.Dial("tcp", cluseringNodes[clusterNum])
+func forwardRequestToMainClusterer(request JoinRequest) {
+	conn, err := net.Dial("tcp", mainClustererIp)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
 	}
-
 	client := rpc.NewClient(conn)
-	clusterResponse := new(IntroducerClusterResponse)
-	if client.Call("ClusteringNodeMembershipList.FindClusterInfo", request, &clusterResponse) != nil {
-		log.Fatal("FindClusterInfo error: ", err)
+	mainClustererResponse := new(IntroducerMainClustererResponse)
+	err = client.Call("MainClustererRPC.ClusteringRequest", request, &mainClustererResponse)
+	if err != nil {
+		log.Fatal("MainClustererRPC.ClusteringRequest error: ", err)
 	}
-	return *clusterResponse
 }

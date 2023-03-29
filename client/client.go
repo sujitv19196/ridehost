@@ -18,9 +18,9 @@ import (
 	"github.com/google/uuid"
 )
 
-type Response ClientIntroducerResponse
+type ClientRPC struct{} // RPC
 
-type ClientRPCs struct{}
+var ip *net.TCPAddr
 
 var myIP string
 var logger *log.Logger
@@ -85,30 +85,32 @@ func main() {
 	nodeType, _ := strconv.Atoi(os.Args[1])
 	lat, _ := strconv.ParseFloat(os.Args[3], 64)
 	lng, _ := strconv.ParseFloat(os.Args[4], 64)
-	req := ClientIntroducerRequest{RequestType: nodeType, IntroducerIP: os.Args[2], Uuid: uuid, Lat: lat, Lng: lng}
+	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
-	fmt.Println("Cluster_Num:", r.ClusterNum)
+	fmt.Println("From Introducer: ", r.Message)
+
+	go acceptClusteringConnections()
 }
 
 // command called by a client to join the system
-func joinSystem(request ClientIntroducerRequest) Response {
+func joinSystem(request JoinRequest) ClientIntroducerResponse {
 	// request to introducer
-	conn, err := net.Dial("tcp", request.IntroducerIP)
+	conn, err := net.Dial("tcp", request.IntroducerIp)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
 	}
 
 	client := rpc.NewClient(conn)
-	response := new(Response)
-	err = client.Call("AcceptClient.ClientJoin", request, &response)
+	response := new(ClientIntroducerResponse)
+	err = client.Call("IntroducerRPC.ClientJoin", request, &response)
 	if err != nil {
-		log.Fatal("ClientJoin error: ", err)
+		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
 	}
 	return *response
 }
 
-func (c *ClientRPCs) JoinCluster(request ClientClusterJoinRequest, response *ClientClusterJoinResponse) error {
+func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *ClientClusterJoinResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
 	clusterId = request.ClusterNum
@@ -168,7 +170,7 @@ func sendPing(neighborIP string) {
 	conn.Close()
 }
 
-func (c *ClientRPCs) SendNodeFailure(request ClusterNodeRemovalRequest, response *ClusterNodeRemovalResponse) error {
+func (c *ClientRPC) SendNodeFailure(request ClusterNodeRemovalRequest, response *ClusterNodeRemovalResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
 	virtRing.RemoveNode(request.NodeIP)
@@ -199,6 +201,25 @@ func sendListRemoval(neighborIp string) {
 			conn.Close()
 		}(ip)
 	}
+}
+
+func acceptClusteringConnections() {
+	clientRPC := new(ClientRPC)
+	rpc.Register(clientRPC)
+	conn, err := net.ListenTCP("tcp", ip)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	rpc.Accept(conn)
+}
+
+func getMyIp() *net.TCPAddr {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["introducer"]))
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	return address
 }
 
 // client requests introduicer

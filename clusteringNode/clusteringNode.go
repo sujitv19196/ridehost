@@ -9,15 +9,14 @@ import (
 	. "ridehost/types"
 	"strconv"
 	"sync"
-	"time"
 )
 
 type MembershipList struct {
 	mu   sync.Mutex
-	List []string
+	List []Node
 }
 
-func (m *MembershipList) Append(elem string) {
+func (m *MembershipList) Append(elem Node) {
 	m.mu.Lock()
 	m.List = append(m.List, elem)
 	m.mu.Unlock()
@@ -27,18 +26,10 @@ var ip net.IP
 var numClusterNodes = 0
 var ML MembershipList
 
-type AcceptClientFromIntroducer bool
+type ClusteringNodeRPC bool
 
 func main() {
 	go acceptConnections()
-	// every ClusteringPeriod minute, run K means
-	for {
-		time.Sleep(ClusteringPeriod * time.Minute) // TODO might want a cond var here
-		ML.mu.Lock()                               // prevent any more adds to the membership list
-		result := kMeansClustering()
-		ML.mu.Unlock()
-		fmt.Println(result)
-	}
 }
 
 func acceptConnections() {
@@ -47,8 +38,8 @@ func acceptConnections() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	acceptClient := new(AcceptClientFromIntroducer)
-	rpc.Register(acceptClient)
+	clusteringNodeRPC := new(ClusteringNodeRPC)
+	rpc.Register(clusteringNodeRPC)
 	conn, err := net.ListenTCP("tcp", address)
 	if err != nil {
 		log.Fatal("listen error:", err)
@@ -58,12 +49,21 @@ func acceptConnections() {
 
 // cluster node accepts an RPC call from client node,
 // get the cluster using the kmeans clustering function and return.
-func (a *AcceptClientFromIntroducer) FindClusterInfo(request IntroducerClusterRequest, response *IntroducerClusterResponse) error {
-	fmt.Println("request from: ", request.Uuid)
-	ML.Append(string(request.Uuid[:]))
+func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClustererClusteringNodeResponse) error {
+	fmt.Println("request from: ", request.NodeRequest.Uuid)
+	ML.Append(request.NodeRequest)
 	// wait for Kmeans to finish
-	response.ClusterNum = 4 // for testing only
-	response.Message = "TestMsg"
+	response.Message = "ACK"
+	return nil
+}
+
+func (c *ClusteringNodeRPC) StartClustering(request string, response *MainClustererClusteringNodeResponse) error {
+	go func() {
+		ML.mu.Lock() // lock membership list and start clustering
+		kMeansClustering()
+		ML.mu.Unlock()
+	}()
+	response.Message = "ACK"
 	return nil
 }
 
