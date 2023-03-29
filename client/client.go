@@ -133,7 +133,7 @@ func sendPing(neighborIP string) {
 		return
 	}
 	fmt.Fprintf(conn, "PING")
-	conn.SetReadDeadline(time.Now().Add(constants.UDPTimeoutMillseconds * time.Millisecond)) // 1.5 seconds
+	conn.SetReadDeadline(time.Now().Add(constants.UDPPingAckTimeout))
 	bytes_read, err := bufio.NewReader(conn).Read(buffer)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
