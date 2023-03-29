@@ -120,9 +120,10 @@ func sendStartClusteringRPC(clusterIp string) {
 	}
 }
 
-func (m *MainClustererRPC) RecvCoreset(coreset Coreset, response *IntroducerMainClustererResponse) error {
+func (m *MainClustererRPC) RecvCoreset(coreset Coreset, response *MainClustererClusteringNodeResponse) error {
 	// add coreset to list
 	coresetList.Append(coreset)
+	response.Message = "ACK"
 	return nil
 }
 
