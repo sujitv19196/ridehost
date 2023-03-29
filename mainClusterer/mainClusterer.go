@@ -15,6 +15,31 @@ import (
 
 type MainClustererRPC bool
 
+type ClientCount struct {
+	count int
+	mu    sync.Mutex
+	cond  sync.Cond
+}
+
+func (c *ClientCount) Increment(elem Coreset) {
+	c.mu.Lock()
+	c.count = c.count + 1
+	c.mu.Unlock()
+	c.cond.Signal()
+}
+
+func (c *ClientCount) Decrement() {
+	c.mu.Lock()
+	c.count = c.count - 1
+	c.mu.Unlock()
+}
+
+func (c *ClientCount) Reset() {
+	c.mu.Lock()
+	c.count = 0
+	c.mu.Unlock()
+}
+
 type CoresetList struct {
 	mu   sync.Mutex
 	cond sync.Cond

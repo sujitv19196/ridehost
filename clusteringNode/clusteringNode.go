@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/rpc"
 	. "ridehost/constants"
+	. "ridehost/kmeansclustering"
 	. "ridehost/types"
 	"strconv"
 	"sync"
@@ -68,7 +69,13 @@ func (c *ClusteringNodeRPC) StartClustering(request string, response *MainCluste
 }
 
 func kMeansClustering() map[string]int {
-	// TODO Perform some operation here
+	// t = total number of clients. It should come from mainClusterer.
+	// t := 10
+	// IndividualKMeansClustering(ML.List, NumClusters, t)
+
+	//Calling the centralized K means clustering for current implementation
+	// clusters := make(map[Point][]Point)
+	CentralizedKMeansClustering(ML.List, NumClusters)
 
 	// clear membership list
 	return map[string]int{"test": 0}
