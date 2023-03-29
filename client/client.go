@@ -119,7 +119,7 @@ func sendPings() {
 			sendPing(neighborIP)
 		}
 		// ping every second
-		time.Sleep(time.Second)
+		time.Sleep(constants.PingFrequency)
 	}
 }
 
