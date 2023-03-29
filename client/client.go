@@ -32,30 +32,6 @@ var isRep bool
 var virtRing *cll.UniqueCLL
 var joined bool
 
-func SetJoined(new_join bool) {
-	mu.Lock()
-	joined = new_join
-	mu.Unlock()
-}
-
-func ReadJoined() bool {
-	mu.Lock()
-	defer mu.Unlock()
-	return joined
-}
-
-func SetIsRep(new_is_rep bool) {
-	mu.Lock()
-	isRep = new_is_rep
-	mu.Unlock()
-}
-
-func ReadIsRep() bool {
-	mu.Lock()
-	defer mu.Unlock()
-	return isRep
-}
-
 func main() {
 	if len(os.Args) != 5 {
 		fmt.Println("format: ./client nodeType introducerIp lat lng")
@@ -76,7 +52,9 @@ func main() {
 
 	mu = sync.Mutex{}
 
-	SetJoined(false)
+	mu.Lock()
+	joined = false
+	mu.Unlock()
 
 	myIP = conn.LocalAddr().(*net.UDPAddr).IP.String()
 	conn.Close()
@@ -174,6 +152,10 @@ func (c *ClientRPC) SendNodeFailure(request ClusterNodeRemovalRequest, response 
 	mu.Lock()
 	defer mu.Unlock()
 	virtRing.RemoveNode(request.NodeIP)
+	// removing self
+	if request.NodeIP == myIP {
+		joined = false
+	}
 	response.Ack = true
 	return nil
 }
