@@ -24,6 +24,12 @@ func (m *MembershipList) Append(elem Node) {
 	m.mu.Unlock()
 }
 
+func (m *MembershipList) Clear() {
+	m.mu.Lock()
+	m.List = nil
+	m.mu.Unlock()
+}
+
 var ip net.IP
 var numClusterNodes = 0
 var ML MembershipList
@@ -60,30 +66,31 @@ func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClusterer
 	return nil
 }
 
-func (c *ClusteringNodeRPC) StartClustering(request string, response *MainClustererClusteringNodeResponse) error {
+func (c *ClusteringNodeRPC) StartClustering(requestclientcount int, response *MainClustererClusteringNodeResponse) error {
 	go func() {
 		ML.mu.Lock() // lock membership list and start clustering
-		kMeansClustering()
+		coreset := kMeansClustering(requestclientcount)
+		// clear membership list
+		ML.Clear()
+		// RPC call
+		sendCoreset(coreset)
 		ML.mu.Unlock()
 	}()
 	response.Message = "ACK"
 	return nil
 }
 
-func kMeansClustering() map[string]int {
-	// t = total number of clients. It should come from mainClusterer.
-	// t := 10
-	// IndividualKMeansClustering(ML.List, NumClusters, t)
+func kMeansClustering(clientcount int) Coreset {
+	// t = clientcount //total number of clients. It should come from mainClusterer.
+	// coreset := IndividualKMeansClustering(ML.List, NumClusters, clientcount)
 
-	//Calling the centralized K means clustering for current implementation
-	// clusters := make(map[Point][]Point)
-	CentralizedKMeansClustering(ML.List, NumClusters)
+	// Calling the centralized K means clustering for current implementation
+	// it returns cluster type and we will create a coreset type from it
+	clusterresult := ClusterResult{}
+	clusterresult = CentralizedKMeansClustering(ML.List, NumClusters)
+	coreset := Coreset{Coreset: []Point{}, CoresetNodes: []Node{}, Tempcluster: clusterresult.ClusterMaps}
 
-	// clear membership list
-
-	// RPC call
-	// sendCoreset()
-	return map[string]int{"test": 0}
+	return coreset
 }
 
 // calls MainClustererRPC.RecvCoreset to give it computed coreset
@@ -97,7 +104,6 @@ func sendCoreset(coreset Coreset) {
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
 
-	// send clustering request to clusterNum clustering Node
 	if client.Call("MainClustererRPC.RecvCoreset", coreset, &clusterResponse) != nil {
 		log.Fatal("MainClustererRPC.RecvCoreset error: ", err)
 	}

@@ -1,4 +1,4 @@
-package main
+package kmeansclustering
 
 import (
 	"fmt"
@@ -14,18 +14,6 @@ import (
 	"gonum.org/v1/gonum/stat/sampleuv"
 )
 
-type Point struct {
-	x float64
-	y float64
-}
-type ClusterResult struct {
-	centroids          []Point
-	clusters           [][]Point
-	clusterMaps        map[string][]string
-	representCenters   []Point
-	representCenterIds []string
-}
-
 func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	data := []Point{}
 	for i := 0; i < len(Nodelist); i++ {
@@ -39,27 +27,27 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	// data := []Point{{1., 1.}, {1., 2.}, {2., 2.}, {5., 5.}, {6., 5.}, {7., 7.}, {10., 10.}, {12., 10.}, {12., 12.}}
 
 	var d clusters.Observations
-	for x := 0; x < len(data); x++ {
+	for i := 0; i < len(data); i++ {
 		d = append(d, clusters.Coordinates{
-			data[x].x,
-			data[x].y,
+			data[i].X,
+			data[i].Y,
 		})
 	}
 	km := kmeans.New()
 	clusters, err := km.Partition(d, k)
 	centroids := []Point{}
 	pointclusters := [][]Point{}
-	clusterMaps := map[string][]string{}
+	clusterMaps := map[Node][]Node{}
 	centerPointList := []Point{}
-	centerPointIdList := []string{}
+	centerPointNodeList := []Node{}
 	fmt.Println("err if any: ", err)
 	for _, c := range clusters {
 		temp := []Point{}
-		clusterUuidList := []string{}
+		clusterList := []Node{}
 		centerPoint := Point{c.Center[0], c.Center[1]}
 		nearestPointToCenterIdx := 0
 		nearestPointToCenter := Point{0, 0}
-		uuidOfPoint := ""
+		pointnode := Node{}
 		idxOfPoint := 0
 		min_dis := 96789056.0
 		for _, obs := range c.Observations {
@@ -71,41 +59,38 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 				nearestPointToCenterIdx = idxOfPoint
 				nearestPointToCenter = p
 			}
-			uuidOfPoint = string(Nodelist[idxOfPoint].Uuid[:])
-			clusterUuidList = append(clusterUuidList, uuidOfPoint)
-			// fmt.Printf("the index of %v in %v is %v", p, data, idx)
+			pointnode = Nodelist[idxOfPoint]
+			clusterList = append(clusterList, pointnode)
 			temp = append(temp, p)
 
 		}
-		nearestPointToCenterUuid := string(Nodelist[nearestPointToCenterIdx].Uuid[:])
+		nearestPointNodeToCenter := Nodelist[nearestPointToCenterIdx]
 		centerPointList = append(centerPointList, nearestPointToCenter)
-		centerPointIdList = append(centerPointIdList, nearestPointToCenterUuid)
-		// fmt.Println("clusterUuidList idxOfPoint", clusterUuidList)
-		// fmt.Println("nearestPointToCenterUuid ", nearestPointToCenterUuid)
-		clusterMaps[nearestPointToCenterUuid] = clusterUuidList
+		centerPointNodeList = append(centerPointNodeList, nearestPointNodeToCenter)
+		clusterMaps[nearestPointNodeToCenter] = clusterList
 		pointclusters = append(pointclusters, temp)
 		centroids = append(centroids, Point{c.Center[0], c.Center[1]})
 	}
 	// fmt.Println("centroids", centroids)
 	// fmt.Println("pointclusters", pointclusters)
 	clusterresult := ClusterResult{}
-	clusterresult.centroids = centroids
-	clusterresult.clusters = pointclusters
-	clusterresult.clusterMaps = clusterMaps
-	clusterresult.representCenters = centerPointList
-	clusterresult.representCenterIds = centerPointIdList
+	clusterresult.Centroids = centroids
+	clusterresult.Clusters = pointclusters
+	clusterresult.ClusterMaps = clusterMaps
+	clusterresult.RepresentCenterPoints = centerPointList
+	clusterresult.RepresentCenterNodes = centerPointNodeList
 
 	return clusterresult
 }
 
-func IndividualKMeansClustering(Nodelist []Node, k int, t int) {
+func IndividualKMeansClustering(Nodelist []Node, k int, t int) Coreset {
 
 	clusterresults := CentralizedKMeansClustering(Nodelist, k)
 	// return clusterresults
 	// fmt.Println("clusterresults from centraulized k means: ", clusterresults)
-	fmt.Println("centroids from centraulized k means: ", clusterresults.centroids)
+	fmt.Println("centroids from centraulized k means: ", clusterresults.Centroids)
 
-	centroids := clusterresults.centroids
+	centroids := clusterresults.Centroids
 	data := []Point{}
 	for i := 0; i < len(Nodelist); i++ {
 		lat := Nodelist[i].Lat
@@ -192,10 +177,11 @@ func IndividualKMeansClustering(Nodelist []Node, k int, t int) {
 
 	// Round 2 step 4: Local k-centers (𝐵𝑖 ) are included to the coreset
 	// Also find Weight on b, wb
-	coresets := qp
+	core := Coreset{}
+	coreset := qp
 	wb := []float64{}
 	for _, centroid := range centroids {
-		coresets = append(coresets, centroid)
+		coreset = append(coreset, centroid)
 		pb := []Point{}
 		pb_indexes := []int{}
 		for idx, point := range data {
@@ -214,6 +200,8 @@ func IndividualKMeansClustering(Nodelist []Node, k int, t int) {
 		wb = append(wb, float64(len(pb))-sumOfWqs)
 
 	}
+	core.Coreset = coreset
+	return core
 
 }
 func intersect(slice1, slice2 []int) []int {
@@ -229,7 +217,7 @@ func intersect(slice1, slice2 []int) []int {
 }
 
 func euclideanDistance(p1, p2 Point) float64 {
-	return math.Sqrt(math.Pow(p1.x-p2.x, 2) + math.Pow(p1.y-p2.y, 2))
+	return math.Sqrt(math.Pow(p1.X-p2.X, 2) + math.Pow(p1.Y-p2.Y, 2))
 }
 
 func main() {

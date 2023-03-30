@@ -21,7 +21,7 @@ type ClientCount struct {
 	cond  sync.Cond
 }
 
-func (c *ClientCount) Increment(elem Coreset) {
+func (c *ClientCount) Increment() {
 	c.mu.Lock()
 	c.count = c.count + 1
 	c.mu.Unlock()
@@ -59,21 +59,27 @@ func (c *CoresetList) Clear() {
 	c.mu.Unlock()
 }
 
-var cluseringNodes = []string{"localhost:" + strconv.Itoa(Ports["clusteringNode"])}
+var clusteringNodes = []string{"localhost:" + strconv.Itoa(Ports["clusteringNode"])}
 var coresetList CoresetList
+var totalclient ClientCount
 
 func main() {
 	coresetList.cond = *sync.NewCond(&coresetList.mu)
+	totalclient.count = 0
 	go acceptConnections()
 
-	for { // send request to start clsutering to all nodes every ClusteringPeriod
+	for { // send request to start clustering to all nodes every ClusteringPeriod
 		time.Sleep(ClusteringPeriod * time.Minute) // TODO might want a cond var here
-		for _, node := range cluseringNodes {
+
+		totalclient.mu.Lock() // freeze t to send same value of t to each clusteringnode
+		for _, node := range clusteringNodes {
 			sendStartClusteringRPC(node)
 		}
+		totalclient.mu.Unlock()
+
 		// wait for all coresets to be recvd
 		coresetList.mu.Lock()
-		for len(coresetList.List) < len(cluseringNodes) {
+		for len(coresetList.List) < len(clusteringNodes) {
 			coresetList.cond.Wait()
 		}
 		coresetList.mu.Unlock()
@@ -106,6 +112,7 @@ func acceptConnections() {
 func (m *MainClustererRPC) ClusteringRequest(request JoinRequest, response *IntroducerMainClustererResponse) error {
 	go sendClusteringRPC(request)
 	response.Message = "ACK"
+	totalclient.Increment() //increment count of t when a client request is sent to a clusteringnode
 	return nil
 }
 
@@ -113,8 +120,8 @@ func sendClusteringRPC(request JoinRequest) {
 	// randomly chose clusteringNode to forward request to
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)
-	clusterNum := r.Intn(len(cluseringNodes))
-	conn, err := net.Dial("tcp", cluseringNodes[clusterNum])
+	clusterNum := r.Intn(len(clusteringNodes))
+	conn, err := net.Dial("tcp", clusteringNodes[clusterNum])
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
@@ -139,8 +146,8 @@ func sendStartClusteringRPC(clusterIp string) {
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
 
-	// send clustering request to clusterNum clustering Node
-	if client.Call("ClusteringNodeRPC.StartClustering", nil, &clusterResponse) != nil {
+	// send start clustering request to clusterNum clustering Node
+	if client.Call("ClusteringNodeRPC.StartClustering", totalclient.count, &clusterResponse) != nil {
 		log.Fatal("ClusteringNodeRPC.StartClustering error: ", err)
 	}
 }

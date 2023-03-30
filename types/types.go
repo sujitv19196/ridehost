@@ -36,8 +36,23 @@ type MainClustererClusteringNodeResponse struct {
 	Error   error
 }
 
+type Point struct {
+	X float64
+	Y float64
+}
+
 type Coreset struct {
-	coreset map[string]int //TODO change, placeholder
+	Coreset      []Point //TODO change, placeholder
+	CoresetNodes []Node
+	Tempcluster  map[Node][]Node
+}
+
+type ClusterResult struct {
+	Centroids             []Point
+	Clusters              [][]Point
+	ClusterMaps           map[Node][]Node
+	RepresentCenterPoints []Point
+	RepresentCenterNodes  []Node
 }
 
 type ClusterInfo struct {
