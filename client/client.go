@@ -71,7 +71,9 @@ func main() {
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
 
-	go acceptClusteringConnections()
+	go acceptPings()
+	go sendPings()
+	acceptClusteringConnections()
 }
 
 // command called by a client to join the system
