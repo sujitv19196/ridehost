@@ -31,7 +31,7 @@ func main() {
 		request.ClusterRepIP = clusterRep
 		request.ClusterNum = 0
 		request.Members = clients
-		joinPromises = append(joinPromises, client.Go("ClientRPCs.JoinCluster", request, response, nil))
+		joinPromises = append(joinPromises, client.Go("ClientRPC.JoinCluster", request, response, nil))
 		if err != nil {
 			log.Fatal("JoinCluster error: ", err)
 		}
@@ -60,7 +60,7 @@ func main() {
 		pingResponses = append(pingResponses, response)
 		request := types.ClientClusterPingingStatusRequest{}
 		request.Status = true
-		pingPromises = append(joinPromises, client.Go("ClientRPCs.StartPinging", request, response, nil))
+		pingPromises = append(joinPromises, client.Go("ClientRPC.StartPinging", request, response, nil))
 		if err != nil {
 			log.Fatal("StartPinging error: ", err)
 		}
