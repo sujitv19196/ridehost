@@ -18,7 +18,7 @@ func main() {
 	var joinResponses []*types.ClientClusterJoinResponse
 
 	for _, client := range clients {
-		conn, err := net.DialTimeout("tcp", client+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
+		conn, err := net.Dial("tcp", client+":"+strconv.Itoa(constants.Ports["clientRPC"]))
 		if err != nil {
 			os.Stderr.WriteString(err.Error() + "\n")
 			os.Exit(1)
