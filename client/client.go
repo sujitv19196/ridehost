@@ -14,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type ClientRPC struct{} // RPC
@@ -63,13 +61,13 @@ func main() {
 	myIPStr = myIP.String()
 	conn.Close()
 
-	uuid := uuid.New()
-	nodeType, _ := strconv.Atoi(os.Args[1])
-	lat, _ := strconv.ParseFloat(os.Args[3], 64)
-	lng, _ := strconv.ParseFloat(os.Args[4], 64)
-	req := types.JoinRequest{NodeRequest: types.Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
-	r := joinSystem(req)
-	fmt.Println("From Introducer: ", r.Message)
+	// uuid := uuid.New()
+	// nodeType, _ := strconv.Atoi(os.Args[1])
+	// lat, _ := strconv.ParseFloat(os.Args[3], 64)
+	// lng, _ := strconv.ParseFloat(os.Args[4], 64)
+	// req := types.JoinRequest{NodeRequest: types.Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
+	// r := joinSystem(req)
+	// fmt.Println("From Introducer: ", r.Message)
 
 	go acceptPings()
 	go sendPings()
