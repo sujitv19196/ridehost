@@ -245,11 +245,8 @@ func sendListRemoval(neighborIp string) {
 func acceptClusteringConnections() {
 	clientRPC := new(ClientRPC)
 	rpc.Register(clientRPC)
-	addr := net.TCPAddr{
-		Port: constants.Ports["clientRPC"],
-		IP:   myIP,
-	}
-	conn, err := net.ListenTCP("tcp", &addr)
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["clientRPC"]))
+	conn, err := net.ListenTCP("tcp", address)
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
