@@ -30,16 +30,25 @@ func (m *MembershipList) Clear() {
 	m.mu.Unlock()
 }
 
+func (m *MembershipList) retainOldMembershipList() []Node {
+	m.mu.Lock() // lock membership list and start clustering
+	oldMLList := m.List
+	m.List = nil
+	m.mu.Unlock()
+	return oldMLList
+}
+
 var ip net.IP
 var numClusterNodes = 0
 var ML MembershipList
+var oldML []Node
 
 var mainClustererIp = "localhost:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 
 type ClusteringNodeRPC bool
 
 func main() {
-	go acceptConnections()
+	acceptConnections()
 }
 
 func acceptConnections() {
@@ -60,34 +69,36 @@ func acceptConnections() {
 // cluster node accepts an RPC call from client node,
 // get the cluster using the kmeans clustering function and return.
 func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClustererClusteringNodeResponse) error {
-	fmt.Println("request from: ", request.NodeRequest.Uuid)
+	fmt.Println("request from: ", string(request.NodeRequest.Uuid[:]))
 	ML.Append(request.NodeRequest)
+	fmt.Println("Membership List: ", ML.List)
 	response.Message = "ACK"
 	return nil
 }
 
-func (c *ClusteringNodeRPC) StartClustering(requestclientcount int, response *MainClustererClusteringNodeResponse) error {
+func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererClusteringNodeResponse) error {
 	go func() {
-		ML.mu.Lock() // lock membership list and start clustering
-		coreset := kMeansClustering(requestclientcount)
-		// clear membership list
-		ML.Clear()
+		coreset := Coreset{}
+		if len(ML.List) >= NumClusters {
+			oldML = ML.retainOldMembershipList()
+			coreset = kMeansClustering()
+		}
 		// RPC call
 		sendCoreset(coreset)
-		ML.mu.Unlock()
+
 	}()
 	response.Message = "ACK"
 	return nil
 }
 
-func kMeansClustering(clientcount int) Coreset {
+func kMeansClustering() Coreset {
 	// t = clientcount //total number of clients. It should come from mainClusterer.
-	// coreset := IndividualKMeansClustering(ML.List, NumClusters, clientcount)
+	// coreset := IndividualKMeansClustering(ML.List, NumClusters)
 
 	// Calling the centralized K means clustering for current implementation
 	// it returns cluster type and we will create a coreset type from it
 	clusterresult := ClusterResult{}
-	clusterresult = CentralizedKMeansClustering(ML.List, NumClusters)
+	clusterresult = CentralizedKMeansClustering(oldML, NumClusters)
 	coreset := Coreset{Coreset: []Point{}, CoresetNodes: []Node{}, Tempcluster: clusterresult.ClusterMaps}
 
 	return coreset

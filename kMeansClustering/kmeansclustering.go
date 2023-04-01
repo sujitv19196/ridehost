@@ -19,7 +19,7 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	for i := 0; i < len(Nodelist); i++ {
 		lat := Nodelist[i].Lat
 		lng := Nodelist[i].Lng
-		pair := Point{lat, lng}
+		pair := Point{X: lat, Y: lng}
 		data = append(data, pair)
 	}
 
