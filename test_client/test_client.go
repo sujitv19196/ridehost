@@ -1,4 +1,4 @@
-package test_client
+package main
 
 import (
 	"log"
