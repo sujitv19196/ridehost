@@ -41,7 +41,7 @@ func main() {
 	for i, promise := range joinPromises {
 		<-promise.Done
 		if joinResponses[i].Ack != true {
-			log.Fatalf("%s did not join cluster", clients[i])
+			log.Fatalf("%s did not join cluster: %s", clients[i], promise.Error)
 		}
 	}
 
