@@ -9,7 +9,7 @@ import (
 	"os"
 	"ridehost/cll"
 	"ridehost/constants"
-	. "ridehost/types"
+	"ridehost/types"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,6 +32,7 @@ var clusterRepIP string
 var isRep bool
 var virtRing *cll.UniqueCLL
 var joined bool
+var startPinging bool
 
 func main() {
 	if len(os.Args) != 5 {
@@ -55,6 +56,7 @@ func main() {
 
 	mu.Lock()
 	joined = false
+	startPinging = false
 	mu.Unlock()
 
 	myIP = conn.LocalAddr().(*net.UDPAddr).IP
@@ -65,7 +67,7 @@ func main() {
 	nodeType, _ := strconv.Atoi(os.Args[1])
 	lat, _ := strconv.ParseFloat(os.Args[3], 64)
 	lng, _ := strconv.ParseFloat(os.Args[4], 64)
-	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
+	req := types.JoinRequest{NodeRequest: types.Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
 
@@ -73,7 +75,7 @@ func main() {
 }
 
 // command called by a client to join the system
-func joinSystem(request JoinRequest) ClientIntroducerResponse {
+func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	// request to introducer
 	conn, err := net.Dial("tcp", request.IntroducerIp)
 	if err != nil {
@@ -82,7 +84,7 @@ func joinSystem(request JoinRequest) ClientIntroducerResponse {
 	}
 
 	client := rpc.NewClient(conn)
-	response := new(ClientIntroducerResponse)
+	response := new(types.ClientIntroducerResponse)
 	err = client.Call("IntroducerRPC.ClientJoin", request, &response)
 	if err != nil {
 		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
@@ -90,7 +92,7 @@ func joinSystem(request JoinRequest) ClientIntroducerResponse {
 	return *response
 }
 
-func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *ClientClusterJoinResponse) error {
+func (c *ClientRPC) JoinCluster(request types.ClientClusterJoinRequest, response *types.ClientClusterJoinResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
 	clusterId = request.ClusterNum
@@ -102,7 +104,16 @@ func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *Clie
 		virtRing.PushBack(member)
 	}
 	joined = true
+	logger.Print("joined cluster")
+	response.Ack = true
+	return nil
+}
 
+func (c *ClientRPC) StartPinging(request types.ClientClusterPingingStatusRequest, response *types.ClientClusterPingingStatusResponse) error {
+	mu.Lock()
+	defer mu.Unlock()
+	startPinging = request.Status
+	logger.Printf("pinging status changed to %t\n", startPinging)
 	response.Ack = true
 	return nil
 }
@@ -111,7 +122,7 @@ func sendPings() {
 	for {
 		neighborIPs := []string{}
 		mu.Lock()
-		if joined {
+		if joined && startPinging {
 			neighborIPs = virtRing.GetNeighbors(myIPStr)
 		}
 		mu.Unlock()
@@ -193,13 +204,14 @@ func acceptPings() {
 	}
 }
 
-func (c *ClientRPC) SendNodeFailure(request ClusterNodeRemovalRequest, response *ClusterNodeRemovalResponse) error {
+func (c *ClientRPC) SendNodeFailure(request types.ClusterNodeRemovalRequest, response *types.ClusterNodeRemovalResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
 	virtRing.RemoveNode(request.NodeIP)
 	// removing self
 	if request.NodeIP == myIPStr {
 		joined = false
+		logger.Print("left cluster")
 	}
 	response.Ack = true
 	return nil
@@ -218,8 +230,8 @@ func sendListRemoval(neighborIp string) {
 			}
 
 			client := rpc.NewClient(conn)
-			response := new(ClusterNodeRemovalResponse)
-			request := ClusterNodeRemovalRequest{}
+			response := new(types.ClusterNodeRemovalResponse)
+			request := types.ClusterNodeRemovalRequest{}
 			request.NodeIP = neighborIp
 			err = client.Call("ClientRPCs.SendNodeFailure", request, &response)
 			if err != nil {

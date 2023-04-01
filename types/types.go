@@ -60,6 +60,14 @@ type ClientClusterJoinResponse struct {
 	Ack bool
 }
 
+type ClientClusterPingingStatusRequest struct {
+	Status bool
+}
+
+type ClientClusterPingingStatusResponse struct {
+	Ack bool
+}
+
 type ClusterNodeRemovalRequest struct {
 	NodeIP string
 }
