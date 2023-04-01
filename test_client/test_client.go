@@ -63,7 +63,7 @@ func main() {
 		pingResponses = append(pingResponses, response)
 		request := types.ClientClusterPingingStatusRequest{}
 		request.Status = true
-		pingPromises = append(joinPromises, client.Go("ClientRPC.StartPinging", request, response, nil))
+		pingPromises = append(pingPromises, client.Go("ClientRPC.StartPinging", request, response, nil))
 		if err != nil {
 			log.Fatal("StartPinging error: ", err)
 		}
