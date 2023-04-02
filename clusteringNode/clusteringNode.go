@@ -7,6 +7,7 @@ import (
 	"net/rpc"
 	"os"
 	. "ridehost/constants"
+	. "ridehost/kmeansclustering"
 	. "ridehost/types"
 	"strconv"
 	"sync"
@@ -23,16 +24,31 @@ func (m *MembershipList) Append(elem Node) {
 	m.mu.Unlock()
 }
 
+func (m *MembershipList) Clear() {
+	m.mu.Lock()
+	m.List = nil
+	m.mu.Unlock()
+}
+
+func (m *MembershipList) retainOldMembershipList() []Node {
+	m.mu.Lock() // lock membership list and start clustering
+	oldMLList := m.List
+	m.List = nil
+	m.mu.Unlock()
+	return oldMLList
+}
+
 var ip net.IP
 var numClusterNodes = 0
 var ML MembershipList
+var oldML []Node
 
 var mainClustererIp = "localhost:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 
 type ClusteringNodeRPC bool
 
 func main() {
-	go acceptConnections()
+	acceptConnections()
 }
 
 func acceptConnections() {
@@ -53,30 +69,39 @@ func acceptConnections() {
 // cluster node accepts an RPC call from client node,
 // get the cluster using the kmeans clustering function and return.
 func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClustererClusteringNodeResponse) error {
-	fmt.Println("request from: ", request.NodeRequest.Uuid)
+	fmt.Println("request from: ", string(request.NodeRequest.Uuid[:]))
 	ML.Append(request.NodeRequest)
+	fmt.Println("Membership List: ", ML.List)
 	response.Message = "ACK"
 	return nil
 }
 
-func (c *ClusteringNodeRPC) StartClustering(request string, response *MainClustererClusteringNodeResponse) error {
+func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererClusteringNodeResponse) error {
 	go func() {
-		ML.mu.Lock() // lock membership list and start clustering
-		kMeansClustering()
-		ML.mu.Unlock()
+		coreset := Coreset{}
+		if len(ML.List) >= NumClusters {
+			oldML = ML.retainOldMembershipList()
+			coreset = kMeansClustering()
+		}
+		// RPC call
+		sendCoreset(coreset)
+
 	}()
 	response.Message = "ACK"
 	return nil
 }
 
-func kMeansClustering() map[string]int {
-	// TODO Perform some operation here
+func kMeansClustering() Coreset {
+	// t = clientcount //total number of clients. It should come from mainClusterer.
+	// coreset := IndividualKMeansClustering(ML.List, NumClusters)
 
-	// clear membership list
+	// Calling the centralized K means clustering for current implementation
+	// it returns cluster type and we will create a coreset type from it
+	clusterresult := ClusterResult{}
+	clusterresult = CentralizedKMeansClustering(oldML, NumClusters)
+	coreset := Coreset{Coreset: []Point{}, CoresetNodes: []Node{}, Tempcluster: clusterresult.ClusterMaps}
 
-	// RPC call
-	// sendCoreset()
-	return map[string]int{"test": 0}
+	return coreset
 }
 
 // calls MainClustererRPC.RecvCoreset to give it computed coreset
@@ -90,7 +115,6 @@ func sendCoreset(coreset Coreset) {
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
 
-	// send clustering request to clusterNum clustering Node
 	if client.Call("MainClustererRPC.RecvCoreset", coreset, &clusterResponse) != nil {
 		log.Fatal("MainClustererRPC.RecvCoreset error: ", err)
 	}

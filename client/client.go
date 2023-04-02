@@ -6,7 +6,8 @@ import (
 	"net"
 	"net/rpc"
 	"os"
-	. "ridehost/constants"
+
+	// . "ridehost/constants"
 	. "ridehost/types"
 	"strconv"
 
@@ -18,24 +19,31 @@ type ClientRPC bool // RPC
 
 var ip *net.TCPAddr
 
-var clusterRep string
+var clusterRep Node
 var clusterNum int
+var nodeItself Node
+
+// var wg sync.WaitGroup
 
 func main() {
-	if len(os.Args) != 5 {
-		fmt.Println("format: ./client nodeType introducerIp lat lng")
+	if len(os.Args) != 6 {
+		fmt.Println("format: ./client nodeType introducerIp lat lng clientPort")
 		os.Exit(1)
 	}
-	ip = getMyIp()
+	portNumber, _ := strconv.Atoi(os.Args[5])
+	ip = getMyIp(portNumber)
+	fmt.Println("Client running on port Number ", portNumber)
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
+
 	lat, _ := strconv.ParseFloat(os.Args[3], 64)
 	lng, _ := strconv.ParseFloat(os.Args[4], 64)
 	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
-
-	go acceptClusteringConnections()
+	// wg.Add(1)
+	acceptClusteringConnections()
+	// wg.Wait()
 }
 
 // command called by a client to join the system
@@ -56,7 +64,16 @@ func joinSystem(request JoinRequest) Response {
 	return *response
 }
 
+func (c *ClientRPC) RecvClusterInfo(clusterInfo ClusterInfo, response *Response) error {
+	nodeItself = clusterInfo.NodeItself
+	clusterRep = clusterInfo.ClusterRep
+	clusterNum = clusterInfo.ClusterNum
+	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
+	return nil
+}
+
 func acceptClusteringConnections() {
+	// defer wg.Done()
 	clientRPC := new(ClientRPC)
 	rpc.Register(clientRPC)
 	conn, err := net.ListenTCP("tcp", ip)
@@ -66,13 +83,8 @@ func acceptClusteringConnections() {
 	rpc.Accept(conn)
 }
 
-func (c *ClientRPC) RecvClusterInfo(clusterInfo ClusterInfo, response *Response) {
-	clusterRep = clusterInfo.ClusterRep
-	clusterNum = clusterInfo.ClusterNum
-}
-
-func getMyIp() *net.TCPAddr {
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["introducer"]))
+func getMyIp(portNumber int) *net.TCPAddr {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(portNumber))
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
