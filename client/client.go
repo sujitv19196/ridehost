@@ -208,6 +208,7 @@ func (c *ClientRPC) SendNodeFailure(request types.ClusterNodeRemovalRequest, res
 	mu.Lock()
 	defer mu.Unlock()
 	virtRing.RemoveNode(request.NodeIP)
+	fmt.Printf("removing node %s\n", request.NodeIP)
 	// removing self
 	if request.NodeIP == myIPStr {
 		joined = false

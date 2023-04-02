@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -71,11 +72,14 @@ func main() {
 	}
 
 	for i, promise := range pingPromises {
+		fmt.Printf("waiting for %d ping promise\n", i)
 		<-promise.Done
 		if pingResponses[i].Ack != true {
 			log.Fatalf("%s did not start pinging", clients[i])
 		}
+		fmt.Printf("closing %d start pinging conn", i)
 		(*pingConns[i]).Close()
+		fmt.Printf("closed %d start pinging conn", i)
 	}
-
+	fmt.Println("test client done")
 }
