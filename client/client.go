@@ -104,7 +104,7 @@ func (c *ClientRPC) JoinCluster(request types.ClientClusterJoinRequest, response
 		virtRing.PushBack(member)
 	}
 	joined = true
-	logger.Print("joined cluster")
+	logger.Println("joined cluster")
 	response.Ack = true
 	return nil
 }
@@ -152,7 +152,7 @@ func sendPing(neighborIP string) {
 		return
 	}
 	// recieve response and check if it's an ack
-	logger.Printf("[sendPing] Message from %s: \"%s\"\n", neighborIP, buffer[:bytes_read])
+	// logger.Printf("[sendPing] Message from %s: \"%s\"\n", neighborIP, buffer[:bytes_read])
 	if strings.Compare(string(buffer[:bytes_read]), "ACK") != 0 {
 		logger.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
 		// remove process ID from all membership lists if ack is not recieved
@@ -181,7 +181,7 @@ func acceptPings() {
 			continue
 		}
 		// recieve message and check if it's a ping
-		logger.Printf("[acceptPings] Message from %v: \"%s\"\n", addr, buffer[:bytes_read])
+		// logger.Printf("[acceptPings] Message from %v: \"%s\"\n", addr, buffer[:bytes_read])
 		if strings.Compare(string(buffer[:bytes_read]), "PING") != 0 {
 			logger.Printf("[acceptPings] PING not recieved from %v\n", addr)
 			continue
@@ -208,11 +208,11 @@ func (c *ClientRPC) SendNodeFailure(request types.ClusterNodeRemovalRequest, res
 	mu.Lock()
 	defer mu.Unlock()
 	virtRing.RemoveNode(request.NodeIP)
-	fmt.Printf("removing node %s\n", request.NodeIP)
+	logger.Printf("removing node %s\n", request.NodeIP)
 	// removing self
 	if request.NodeIP == myIPStr {
 		joined = false
-		logger.Print("left cluster")
+		logger.Println("left cluster")
 	}
 	response.Ack = true
 	return nil
@@ -245,9 +245,7 @@ func sendListRemoval(neighborIp string, IPs []string) {
 				response := new(types.ClusterNodeRemovalResponse)
 				request := types.ClusterNodeRemovalRequest{}
 				request.NodeIP = neighborIp
-				fmt.Printf("making client Call for %s\n", ip)
 				err = client.Call("ClientRPC.SendNodeFailure", request, response)
-				fmt.Printf("made client Call for %s\n", ip)
 				if err != nil {
 					log.Fatal("SendNodeFailure error: ", err)
 				}
