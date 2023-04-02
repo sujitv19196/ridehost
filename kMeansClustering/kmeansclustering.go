@@ -1,11 +1,10 @@
-package kmeansclustering
+package kMeansClustering
 
 import (
 	"fmt"
 	"math"
 	. "ridehost/types"
 
-	"github.com/google/uuid"
 	"github.com/muesli/clusters"
 	"github.com/muesli/kmeans"
 	"golang.org/x/exp/slices"
@@ -220,29 +219,29 @@ func euclideanDistance(p1, p2 Point) float64 {
 	return math.Sqrt(math.Pow(p1.X-p2.X, 2) + math.Pow(p1.Y-p2.Y, 2))
 }
 
-func main() {
-	n1 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 24, Lng: 25}
-	n2 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 1, Lng: 2}
-	n3 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 12, Lng: 13}
-	n4 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 5, Lng: 6}
-	n5 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 6, Lng: 5}
-	n6 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 1, Lng: 1}
-	n7 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 15, Lng: 15}
-	n8 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 16, Lng: 19}
-	n9 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 4, Lng: 8}
-	nlist := []Node{}
-	nlist = append(nlist, n1)
-	nlist = append(nlist, n2)
-	nlist = append(nlist, n3)
-	nlist = append(nlist, n4)
-	nlist = append(nlist, n5)
-	nlist = append(nlist, n6)
-	nlist = append(nlist, n7)
-	nlist = append(nlist, n8)
-	nlist = append(nlist, n9)
+// func main() {
+// 	n1 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 24, Lng: 25}
+// 	n2 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 1, Lng: 2}
+// 	n3 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 12, Lng: 13}
+// 	n4 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 5, Lng: 6}
+// 	n5 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 6, Lng: 5}
+// 	n6 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 1, Lng: 1}
+// 	n7 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 15, Lng: 15}
+// 	n8 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 16, Lng: 19}
+// 	n9 := Node{NodeType: Driver, Ip: nil, Uuid: uuid.New(), Lat: 4, Lng: 8}
+// 	nlist := []Node{}
+// 	nlist = append(nlist, n1)
+// 	nlist = append(nlist, n2)
+// 	nlist = append(nlist, n3)
+// 	nlist = append(nlist, n4)
+// 	nlist = append(nlist, n5)
+// 	nlist = append(nlist, n6)
+// 	nlist = append(nlist, n7)
+// 	nlist = append(nlist, n8)
+// 	nlist = append(nlist, n9)
 
-	clusterresult := CentralizedKMeansClustering(nlist, 3)
-	fmt.Println("clusterresult", clusterresult)
-	// IndividualKMeansClustering(nlist, 3, 1)
-	// fmt.Println("clusterresult", clusterresult)
-}
+// 	clusterresult := CentralizedKMeansClustering(nlist, 3)
+// 	fmt.Println("clusterresult", clusterresult)
+// 	// IndividualKMeansClustering(nlist, 3, 1)
+// 	// fmt.Println("clusterresult", clusterresult)
+// }
