@@ -1,5 +1,6 @@
 import random
 import subprocess
+from multiprocessing import Pool
 
 def generate_random_points(num_points, min_lat, max_lat, min_lon, max_lon):
     """
@@ -35,9 +36,10 @@ def run_executable(executable_path, coords):
     None.
     """
     with open('output.log', 'w') as f:
+        pool = Pool(processes=len(coords))
         for i in range(len(coords)):
             nodeType = random.randint(0, 1)
-            subprocess.run([executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])], stdout=f)
+            pool.apply_async(subprocess.run([executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])], kwds={'stdout': f}))
     f.close()   
 
 coords = generate_random_points(10, -90, 90, -180, 180)

@@ -68,6 +68,7 @@ func (c *ClientRPC) RecvClusterInfo(clusterInfo ClusterInfo, response *Response)
 	clusterRep = clusterInfo.ClusterRep
 	clusterNum = clusterInfo.ClusterNum
 	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
+	os.Exit(0)
 	return nil
 }
 
