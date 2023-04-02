@@ -25,12 +25,15 @@ var myIPStr string
 var logger *log.Logger
 
 var mu sync.Mutex
-var clusterId int
-var clusterRepIP string
 var isRep bool
 var virtRing *cll.UniqueCLL
 var joined bool
 var startPinging bool
+var clusterRepIP string
+var clusterNum int
+var nodeItself types.Node
+
+// var wg sync.WaitGroup
 
 func main() {
 	if len(os.Args) != 5 {
@@ -95,7 +98,7 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 func (c *ClientRPC) JoinCluster(request types.ClientClusterJoinRequest, response *types.ClientClusterJoinResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
-	clusterId = request.ClusterNum
+	clusterNum = request.ClusterNum
 	clusterRepIP = request.ClusterRepIP
 	isRep = clusterRepIP == myIPStr
 	virtRing = &cll.UniqueCLL{}
@@ -255,6 +258,16 @@ func sendListRemoval(neighborIp string, IPs []string) {
 	}
 }
 
+func (c *ClientRPC) RecvClusterInfo(clusterInfo types.ClusterInfo, response *types.ClientMainClustererResponse) error {
+	mu.Lock()
+	nodeItself = clusterInfo.NodeItself
+	clusterRep := clusterInfo.ClusterRep
+	clusterNum = clusterInfo.ClusterNum
+	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
+	mu.Unlock()
+	return nil
+}
+
 func acceptClusteringConnections() {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["clientRPC"]))
 	if err != nil {
@@ -269,8 +282,8 @@ func acceptClusteringConnections() {
 	rpc.Accept(conn)
 }
 
-func getMyIp() *net.TCPAddr {
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["introducer"]))
+func getMyIp(portNumber int) *net.TCPAddr {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(portNumber))
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)

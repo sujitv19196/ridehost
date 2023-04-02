@@ -4,3 +4,4 @@ constants/constants
 introducer/introducer
 mainClusterer/mainClusterer
 test_client/test_client
+clusteringNode/clusteringNode
