@@ -39,7 +39,9 @@ def run_executable(executable_path, coords):
         pool = Pool(processes=len(coords))
         for i in range(len(coords)):
             nodeType = random.randint(0, 1)
-            pool.apply_async(subprocess.run([executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])], kwds={'stdout': f}))
+            pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
+        pool.close()
+        pool.join()
     f.close()   
 
 coords = generate_random_points(10, -90, 90, -180, 180)
