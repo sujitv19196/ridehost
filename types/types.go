@@ -56,7 +56,8 @@ type ClusterResult struct {
 }
 
 type ClusterInfo struct {
-	ClusterRep string
+	NodeItself Node
+	ClusterRep Node
 	ClusterNum int
 }
 

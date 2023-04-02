@@ -19,8 +19,9 @@ type ClientRPC bool // RPC
 
 var ip *net.TCPAddr
 
-var clusterRep string
+var clusterRep Node
 var clusterNum int
+var nodeItself Node
 
 // var wg sync.WaitGroup
 
@@ -64,8 +65,10 @@ func joinSystem(request JoinRequest) Response {
 }
 
 func (c *ClientRPC) RecvClusterInfo(clusterInfo ClusterInfo, response *Response) error {
+	nodeItself = clusterInfo.NodeItself
 	clusterRep = clusterInfo.ClusterRep
 	clusterNum = clusterInfo.ClusterNum
+	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
 	return nil
 }
 

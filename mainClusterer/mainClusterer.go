@@ -58,10 +58,24 @@ func main() {
 
 		// TODO union of coresets
 		clusterNums := coresetUnion()
+		tempcorelist := coresetList.List
 		coresetList.Clear()
+
+		// find ClusterRepresentation Info to send to client
+		coreunion := map[Node]Node{}
+		corelist := tempcorelist
+		for _, core := range corelist {
+			for repNode, clusterList := range core.Tempcluster {
+				for _, node := range clusterList {
+					coreunion[node] = repNode
+				}
+			}
+		}
+
 		// send RPCs to clients with their cluster rep ip
-		for node, cluserNum := range clusterNums {
-			go sendClusterInfo(node, ClusterInfo{ClusterRep: "TODO", ClusterNum: cluserNum})
+		for node, clusterNum := range clusterNums {
+			clusterinfo := ClusterInfo{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum}
+			go sendClusterInfo(node, clusterinfo)
 		}
 	}
 }
@@ -174,6 +188,8 @@ func sendClusterInfo(node Node, clusterinfo ClusterInfo) {
 	}
 	client := rpc.NewClient(conn)
 	response := new(ClientMainClustererResponse)
+	fmt.Println("send this clusterRep and clusterNum from main: ", clusterinfo)
+
 	err = client.Call("ClientRPC.RecvClusterInfo", clusterinfo, &response)
 	if err != nil {
 		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
