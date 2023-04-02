@@ -8,7 +8,7 @@ var Ports = map[string]int{"introducer": 2233, "mainClusterer": 2234, "clusterin
 
 const PingFrequency = 2 * time.Second
 
-const UDPPingAckTimeout = 7500 * time.Millisecond
+const UDPPingAckTimeout = 2500 * time.Millisecond
 
 const NumClusters = 5
 
