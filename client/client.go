@@ -23,7 +23,6 @@ var ip *net.TCPAddr
 
 var myIP net.IP
 var myIPStr string
-var logger *log.Logger
 
 var mu sync.Mutex
 var isRep bool
@@ -41,11 +40,6 @@ func main() {
 		fmt.Println("format: ./client nodeType introducerIp lat lng")
 		os.Exit(1)
 	}
-
-	// external log file
-	f, _ := os.OpenFile("output.txt", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0666)
-	defer f.Close()
-	logger = log.New(f, "OUTPUT:", log.Ldate|log.Ltime|log.Lshortfile)
 
 	// get this machine's IP address
 	conn, err := net.Dial("udp", "8.8.8.8:80")
@@ -108,7 +102,7 @@ func (c *ClientRPC) JoinCluster(request types.ClientClusterJoinRequest, response
 		virtRing.PushBack(member)
 	}
 	joined = true
-	logger.Println("joined cluster")
+	log.Println("joined cluster")
 	response.Ack = true
 	return nil
 }
@@ -117,7 +111,7 @@ func (c *ClientRPC) StartPinging(request types.ClientClusterPingingStatusRequest
 	mu.Lock()
 	defer mu.Unlock()
 	startPinging = request.Status
-	logger.Printf("pinging status changed to %t\n", startPinging)
+	log.Printf("pinging status changed to %t\n", startPinging)
 	response.Ack = true
 	return nil
 }
@@ -174,7 +168,7 @@ func sendPing(neighborIP string) bool {
 	// logger.Printf("[sendPing] Message from %s: \"%s\"\n", neighborIP, buffer[:bytes_read])
 	if strings.Compare(string(buffer[:bytes_read]), "ACK") != 0 {
 		// remove process ID from all membership lists if ack is not recieved
-		logger.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
+		log.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
 		return false
 	}
 	return true
@@ -202,7 +196,7 @@ func acceptPings() {
 		// recieve message and check if it's a ping
 		// logger.Printf("[acceptPings] Message from %v: \"%s\"\n", addr, buffer[:bytes_read])
 		if strings.Compare(string(buffer[:bytes_read]), "PING") != 0 {
-			logger.Printf("[acceptPings] PING not recieved from %v\n", addr)
+			log.Printf("[acceptPings] PING not recieved from %v\n", addr)
 			continue
 		}
 		go func(conn *net.UDPConn, addr *net.UDPAddr, joined bool) {
@@ -227,11 +221,11 @@ func (c *ClientRPC) SendNodeFailure(request types.ClusterNodeRemovalRequest, res
 	mu.Lock()
 	defer mu.Unlock()
 	virtRing.RemoveNode(request.NodeIP)
-	logger.Printf("removing node %s\n", request.NodeIP)
+	log.Printf("removing node %s\n", request.NodeIP)
 	// removing self
 	if request.NodeIP == myIPStr {
 		joined = false
-		logger.Println("left cluster")
+		log.Println("left cluster")
 	}
 	response.Ack = true
 	return nil
@@ -244,7 +238,7 @@ func RemoveNode(nodeIP string) {
 	virtRing.RemoveNode(nodeIP)
 	mu.Unlock()
 	go sendListRemoval(nodeIP, IPs)
-	logger.Printf("removed node %s\n", nodeIP)
+	log.Printf("removed node %s\n", nodeIP)
 }
 
 func sendListRemoval(neighborIp string, IPs []string) {
@@ -303,7 +297,6 @@ func getMyIp(portNumber int) *net.TCPAddr {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(portNumber))
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 	return address
 }
