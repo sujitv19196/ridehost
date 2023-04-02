@@ -230,10 +230,13 @@ func RemoveNode(nodeIP string) {
 func sendListRemoval(neighborIp string, IPs []string) {
 	for _, ip := range IPs {
 		if ip != myIPStr {
-			func(ip string, neighborIp string) {
+			go func(ip string, neighborIp string) {
 				conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
 				// only throw error when can't connect to non-failed node
-				if err != nil && ip != neighborIp {
+				if err != nil {
+					if ip == neighborIp {
+						return
+					}
 					os.Stderr.WriteString(err.Error() + "\n")
 					os.Exit(1)
 				}
