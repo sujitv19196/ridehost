@@ -7,7 +7,7 @@ import (
 	"net/rpc"
 	"os"
 	. "ridehost/constants"
-	. "ridehost/kmeansclustering"
+	. "ridehost/kMeansClustering"
 	. "ridehost/types"
 	"strconv"
 	"sync"
