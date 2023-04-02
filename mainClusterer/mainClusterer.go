@@ -110,7 +110,7 @@ func sendClusteringRPC(request JoinRequest) {
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)
 	clusterNum := r.Intn(len(clusteringNodes))
-	fmt.Println("Call Dial Site 2: ", clusteringNodes[clusterNum])
+	fmt.Println("send cluster req to: ", clusteringNodes[clusterNum])
 	conn, err := net.Dial("tcp", clusteringNodes[clusterNum])
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
@@ -127,7 +127,7 @@ func sendClusteringRPC(request JoinRequest) {
 }
 
 func sendStartClusteringRPC(clusterIp string) {
-	fmt.Println("Call Dial Site 1: ", clusterIp)
+	fmt.Println("start clustering at: ", clusterIp)
 	conn, err := net.Dial("tcp", clusterIp)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
