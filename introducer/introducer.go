@@ -11,7 +11,9 @@ import (
 )
 
 var ip net.IP
-var mainClustererIp = "localhost:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
+
+// VM 2
+var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 
 type IntroducerRPC bool
 

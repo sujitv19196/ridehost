@@ -35,7 +35,7 @@ func (c *CoresetList) Clear() {
 	c.mu.Unlock()
 }
 
-var clusteringNodes = []string{"localhost:" + strconv.Itoa(Ports["clusteringNode"])}
+var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
 var coresetList CoresetList
 
 func main() {
