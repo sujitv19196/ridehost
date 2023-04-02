@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strings"
 
 	. "ridehost/constants"
 	. "ridehost/types"
@@ -17,7 +18,7 @@ import (
 type Response ClientIntroducerResponse
 type ClientRPC bool // RPC
 
-var ip *net.TCPAddr
+var clientIp string
 
 var clusterRep Node
 var clusterNum int
@@ -31,14 +32,14 @@ func main() {
 		os.Exit(1)
 	}
 	// portNumber, _ := strconv.Atoi(os.Args[5])
-	ip = getMyIp()
+	clientIp = getMyIp()
 	// fmt.Println("Client running on port Number ", portNumber)
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
 
 	lat, _ := strconv.ParseFloat(os.Args[3], 64)
 	lng, _ := strconv.ParseFloat(os.Args[4], 64)
-	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
+	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
 	// wg.Add(1)
@@ -87,7 +88,7 @@ func acceptClusteringConnections() {
 	rpc.Accept(conn)
 }
 
-func getMyIp() *net.TCPAddr {
+func getMyIp() string {
 	ief, err := net.InterfaceByName("eth0")
 	if err != nil {
 		log.Fatal(err)
@@ -100,8 +101,9 @@ func getMyIp() *net.TCPAddr {
 	tcpAddr := &net.TCPAddr{
 		IP: addrs[0].(*net.IPNet).IP,
 	}
-	fmt.Println(tcpAddr.String())
-	return tcpAddr
+	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["client"])
+	fmt.Println(ipstr)
+	return ipstr
 }
 
 // client requests introduicer

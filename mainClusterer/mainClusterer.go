@@ -180,8 +180,8 @@ func coresetUnion() map[Node]int {
 }
 
 func sendClusterInfo(node Node, clusterinfo ClusterInfo) {
-	fmt.Println("Send cluster info to: ", node.Ip.String())
-	conn, err := net.Dial("tcp", node.Ip.String()) // TODO MIHGT BE WRONG IP
+	fmt.Println("Send cluster info to: ", node.Ip)
+	conn, err := net.Dial("tcp", node.Ip)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
