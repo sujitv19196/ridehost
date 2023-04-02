@@ -223,9 +223,10 @@ func sendListRemoval(neighborIp string) {
 	IPs := virtRing.GetList()
 	mu.Unlock()
 	for _, ip := range IPs {
-		go func(ip string) {
+		go func(ip string, neighborIp string) {
 			conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
-			if err != nil {
+			// only throw error when can't connect to non-failed node
+			if err != nil && ip != neighborIp {
 				os.Stderr.WriteString(err.Error() + "\n")
 				os.Exit(1)
 			}
@@ -239,7 +240,7 @@ func sendListRemoval(neighborIp string) {
 				log.Fatal("SendNodeFailure error: ", err)
 			}
 			conn.Close()
-		}(ip)
+		}(ip, neighborIp)
 	}
 }
 

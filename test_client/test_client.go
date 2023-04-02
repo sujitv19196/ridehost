@@ -77,9 +77,9 @@ func main() {
 		if pingResponses[i].Ack != true {
 			log.Fatalf("%s did not start pinging", clients[i])
 		}
-		fmt.Printf("closing %d start pinging conn", i)
+		fmt.Printf("closing %d start pinging conn\n", i)
 		(*pingConns[i]).Close()
-		fmt.Printf("closed %d start pinging conn", i)
+		fmt.Printf("closed %d start pinging conn\n", i)
 	}
 	fmt.Println("test client done")
 }
