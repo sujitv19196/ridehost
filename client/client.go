@@ -31,9 +31,7 @@ func main() {
 		fmt.Println("format: ./client nodeType introducerIp lat lng")
 		os.Exit(1)
 	}
-	// portNumber, _ := strconv.Atoi(os.Args[5])
 	clientIp = getMyIp()
-	// fmt.Println("Client running on port Number ", portNumber)
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
 
