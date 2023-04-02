@@ -140,15 +140,15 @@ func sendPing(neighborIP string) {
 	conn, err := net.Dial("udp", neighborIP+":"+strconv.Itoa(constants.Ports["acceptPings"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
-		go sendListRemoval(neighborIP)
+		RemoveNode(neighborIP)
 		return
 	}
 	fmt.Fprintf(conn, "PING")
 	conn.SetReadDeadline(time.Now().Add(constants.UDPPingAckTimeout))
 	bytes_read, err := bufio.NewReader(conn).Read(buffer)
 	if err != nil {
+		RemoveNode(neighborIP)
 		os.Stderr.WriteString(err.Error() + "\n")
-		go sendListRemoval(neighborIP)
 		return
 	}
 	// recieve response and check if it's an ack
@@ -156,7 +156,7 @@ func sendPing(neighborIP string) {
 	if strings.Compare(string(buffer[:bytes_read]), "ACK") != 0 {
 		logger.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
 		// remove process ID from all membership lists if ack is not recieved
-		go sendListRemoval(neighborIP)
+		RemoveNode(neighborIP)
 	}
 	conn.Close()
 }
@@ -218,29 +218,37 @@ func (c *ClientRPC) SendNodeFailure(request types.ClusterNodeRemovalRequest, res
 	return nil
 }
 
-func sendListRemoval(neighborIp string) {
+func RemoveNode(nodeIP string) {
 	mu.Lock()
+	// get list before removing node so failed node gets rpc saying it failed
 	IPs := virtRing.GetList()
+	virtRing.RemoveNode(nodeIP)
 	mu.Unlock()
-	for _, ip := range IPs {
-		go func(ip string, neighborIp string) {
-			conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
-			// only throw error when can't connect to non-failed node
-			if err != nil && ip != neighborIp {
-				os.Stderr.WriteString(err.Error() + "\n")
-				os.Exit(1)
-			}
+	go sendListRemoval(nodeIP, IPs)
+}
 
-			client := rpc.NewClient(conn)
-			response := new(types.ClusterNodeRemovalResponse)
-			request := types.ClusterNodeRemovalRequest{}
-			request.NodeIP = neighborIp
-			err = client.Call("ClientRPC.SendNodeFailure", request, response)
-			if err != nil {
-				log.Fatal("SendNodeFailure error: ", err)
-			}
-			conn.Close()
-		}(ip, neighborIp)
+func sendListRemoval(neighborIp string, IPs []string) {
+	for _, ip := range IPs {
+		if ip != myIPStr {
+			go func(ip string, neighborIp string) {
+				conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
+				// only throw error when can't connect to non-failed node
+				if err != nil && ip != neighborIp {
+					os.Stderr.WriteString(err.Error() + "\n")
+					os.Exit(1)
+				}
+
+				client := rpc.NewClient(conn)
+				response := new(types.ClusterNodeRemovalResponse)
+				request := types.ClusterNodeRemovalRequest{}
+				request.NodeIP = neighborIp
+				err = client.Call("ClientRPC.SendNodeFailure", request, response)
+				if err != nil {
+					log.Fatal("SendNodeFailure error: ", err)
+				}
+				conn.Close()
+			}(ip, neighborIp)
+		}
 	}
 }
 
