@@ -129,21 +129,25 @@ func sendPings() {
 			neighborIPs = virtRing.GetNeighbors(myIPStr)
 		}
 		mu.Unlock()
+		var wg sync.WaitGroup
+		wg.Add(len(neighborIPs))
 		for _, neighborIP := range neighborIPs {
-			sendPing(neighborIP)
+			sendPing(neighborIP, &wg)
 		}
+		wg.Wait()
 		// ping every second
 		time.Sleep(constants.PingFrequency)
 	}
 }
 
-func sendPing(neighborIP string) {
+func sendPing(neighborIP string, wg *sync.WaitGroup) {
 	// send ping
+	defer wg.Done()
 	buffer := make([]byte, 2048)
 	conn, err := net.Dial("udp", neighborIP+":"+strconv.Itoa(constants.Ports["acceptPings"]))
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
 		RemoveNode(neighborIP)
+		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
 	fmt.Fprintf(conn, "PING")
@@ -157,9 +161,9 @@ func sendPing(neighborIP string) {
 	// recieve response and check if it's an ack
 	// logger.Printf("[sendPing] Message from %s: \"%s\"\n", neighborIP, buffer[:bytes_read])
 	if strings.Compare(string(buffer[:bytes_read]), "ACK") != 0 {
-		logger.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
 		// remove process ID from all membership lists if ack is not recieved
 		RemoveNode(neighborIP)
+		logger.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
 	}
 	conn.Close()
 }
