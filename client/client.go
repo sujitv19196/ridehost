@@ -73,10 +73,14 @@ func (c *ClientRPC) RecvClusterInfo(clusterInfo ClusterInfo, response *Response)
 }
 
 func acceptClusteringConnections() {
-	// defer wg.Done()
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["client"]))
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
 	clientRPC := new(ClientRPC)
 	rpc.Register(clientRPC)
-	conn, err := net.ListenTCP("tcp", ip)
+	conn, err := net.ListenTCP("tcp", address)
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
@@ -84,12 +88,20 @@ func acceptClusteringConnections() {
 }
 
 func getMyIp() *net.TCPAddr {
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["client"]))
+	ief, err := net.InterfaceByName("eth0")
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
-	return address
+	addrs, err := ief.Addrs()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tcpAddr := &net.TCPAddr{
+		IP: addrs[0].(*net.IPNet).IP,
+	}
+	fmt.Println(tcpAddr.String())
+	return tcpAddr
 }
 
 // client requests introduicer
