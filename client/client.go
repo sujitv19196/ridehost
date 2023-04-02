@@ -7,7 +7,7 @@ import (
 	"net/rpc"
 	"os"
 
-	// . "ridehost/constants"
+	. "ridehost/constants"
 	. "ridehost/types"
 	"strconv"
 
@@ -26,13 +26,13 @@ var nodeItself Node
 // var wg sync.WaitGroup
 
 func main() {
-	if len(os.Args) != 6 {
-		fmt.Println("format: ./client nodeType introducerIp lat lng clientPort")
+	if len(os.Args) != 5 {
+		fmt.Println("format: ./client nodeType introducerIp lat lng")
 		os.Exit(1)
 	}
-	portNumber, _ := strconv.Atoi(os.Args[5])
-	ip = getMyIp(portNumber)
-	fmt.Println("Client running on port Number ", portNumber)
+	// portNumber, _ := strconv.Atoi(os.Args[5])
+	ip = getMyIp()
+	// fmt.Println("Client running on port Number ", portNumber)
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
 
@@ -49,7 +49,7 @@ func main() {
 // command called by a client to join the system
 func joinSystem(request JoinRequest) Response {
 	// request to introducer
-	conn, err := net.Dial("tcp", request.IntroducerIp)
+	conn, err := net.Dial("tcp", request.IntroducerIp+":"+strconv.Itoa(Ports["introducer"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
@@ -83,8 +83,8 @@ func acceptClusteringConnections() {
 	rpc.Accept(conn)
 }
 
-func getMyIp(portNumber int) *net.TCPAddr {
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(portNumber))
+func getMyIp() *net.TCPAddr {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["client"]))
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
