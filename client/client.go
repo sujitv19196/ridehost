@@ -232,10 +232,10 @@ func sendListRemoval(neighborIp string) {
 			}
 
 			client := rpc.NewClient(conn)
-			response := types.ClusterNodeRemovalResponse{}
+			response := new(types.ClusterNodeRemovalResponse)
 			request := types.ClusterNodeRemovalRequest{}
 			request.NodeIP = neighborIp
-			err = client.Call("ClientRPC.SendNodeFailure", request, &response)
+			err = client.Call("ClientRPC.SendNodeFailure", request, response)
 			if err != nil {
 				log.Fatal("SendNodeFailure error: ", err)
 			}
