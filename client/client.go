@@ -132,7 +132,7 @@ func sendPings() {
 		var wg sync.WaitGroup
 		wg.Add(len(neighborIPs))
 		for _, neighborIP := range neighborIPs {
-			sendPing(neighborIP, &wg)
+			go sendPing(neighborIP, &wg)
 		}
 		wg.Wait()
 		// ping every second
