@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"net/rpc"
 	"os"
@@ -132,7 +133,7 @@ func sendPings() {
 		var wg sync.WaitGroup
 		wg.Add(len(neighborIPs))
 		for _, neighborIP := range neighborIPs {
-			go sendPing(neighborIP, &wg)
+			go AttemptPings(neighborIP, &wg)
 		}
 		wg.Wait()
 		// ping every second
@@ -140,32 +141,43 @@ func sendPings() {
 	}
 }
 
-func sendPing(neighborIP string, wg *sync.WaitGroup) {
-	// send ping
+func AttemptPings(neighborIP string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	if !sendPing(neighborIP) {
+		for i := 0; i < 2; i++ {
+			time.Sleep(time.Duration(math.Pow(2, float64(i+1))) * time.Second)
+			if sendPing(neighborIP) {
+				return
+			}
+		}
+		RemoveNode(neighborIP)
+	}
+}
+
+func sendPing(neighborIP string) bool {
+	// send ping
 	buffer := make([]byte, 2048)
 	conn, err := net.Dial("udp", neighborIP+":"+strconv.Itoa(constants.Ports["acceptPings"]))
 	if err != nil {
-		RemoveNode(neighborIP)
 		os.Stderr.WriteString(err.Error() + "\n")
-		return
+		return false
 	}
+	defer conn.Close()
 	fmt.Fprintf(conn, "PING")
 	conn.SetReadDeadline(time.Now().Add(constants.UDPPingAckTimeout))
 	bytes_read, err := bufio.NewReader(conn).Read(buffer)
 	if err != nil {
-		RemoveNode(neighborIP)
 		os.Stderr.WriteString(err.Error() + "\n")
-		return
+		return false
 	}
 	// recieve response and check if it's an ack
 	// logger.Printf("[sendPing] Message from %s: \"%s\"\n", neighborIP, buffer[:bytes_read])
 	if strings.Compare(string(buffer[:bytes_read]), "ACK") != 0 {
 		// remove process ID from all membership lists if ack is not recieved
-		RemoveNode(neighborIP)
 		logger.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
+		return false
 	}
-	conn.Close()
+	return true
 }
 
 func acceptPings() {
@@ -232,6 +244,7 @@ func RemoveNode(nodeIP string) {
 	virtRing.RemoveNode(nodeIP)
 	mu.Unlock()
 	go sendListRemoval(nodeIP, IPs)
+	logger.Printf("removed node %s\n", nodeIP)
 }
 
 func sendListRemoval(neighborIp string, IPs []string) {
