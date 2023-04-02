@@ -125,12 +125,8 @@ func (L *UniqueCLL) GetNeighbors(key string) []string {
 	}
 	if L.size == 2 {
 		machine_ids = append(machine_ids, curr_node.next.key)
-	} else if L.size == 3 {
+	} else if L.size > 2 {
 		machine_ids = append(machine_ids, curr_node.prev.key)
-		machine_ids = append(machine_ids, curr_node.next.key)
-	} else if L.size > 3 {
-		machine_ids = append(machine_ids, curr_node.prev.key)
-		machine_ids = append(machine_ids, curr_node.prev.prev.key)
 		machine_ids = append(machine_ids, curr_node.next.key)
 	}
 	// L.mu.Unlock()
