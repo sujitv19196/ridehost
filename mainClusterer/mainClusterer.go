@@ -58,25 +58,27 @@ func main() {
 
 		// TODO union of coresets
 		clusterNums := coresetUnion()
-		tempcorelist := coresetList.List
-		coresetList.Clear()
-
+		fmt.Println(clusterNums)
+//		tempcorelist := coresetList.List
+//		coresetList.Clear()
+//
 		// find ClusterRepresentation Info to send to client
-		coreunion := map[Node]Node{}
-		corelist := tempcorelist
-		for _, core := range corelist {
-			for repNode, clusterList := range core.Tempcluster {
-				for _, node := range clusterList {
-					coreunion[node] = repNode
-				}
-			}
-		}
+		//coreunion := map[Node]Node{}
+		//corelist := tempcorelist
+		//fmt.Println(corelist)
+		//for _, core := range corelist {
+		//	for repNode, clusterList := range core.Tempcluster {
+		//		for _, node := range clusterList {
+		//			coreunion[node] = repNode
+		//		}
+		//	}
+		//}
 
-		// send RPCs to clients with their cluster rep ip
-		for node, clusterNum := range clusterNums {
-			clusterinfo := ClusterInfo{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum}
-			go sendClusterInfo(node, clusterinfo)
-		}
+		//// send RPCs to clients with their cluster rep ip
+		//for node, clusterNum := range clusterNums {
+		//	clusterinfo := ClusterInfo{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum}
+		//	go sendClusterInfo(node, clusterinfo)
+		//}
 	}
 }
 
@@ -97,7 +99,6 @@ func acceptConnections() {
 }
 
 func (m *MainClustererRPC) ClusteringRequest(request JoinRequest, response *IntroducerMainClustererResponse) error {
-	fmt.Println("hello")
 	go sendClusteringRPC(request)
 	response.Message = "ACK"
 	// totalclient.Increment() //increment count of t when a client request is sent to a clusteringnode
