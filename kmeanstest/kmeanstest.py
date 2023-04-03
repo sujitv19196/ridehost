@@ -44,5 +44,5 @@ def run_executable(executable_path, coords):
         pool.join()
     f.close()   
 
-coords = generate_random_points(10, -90, 90, -180, 180)
+coords = generate_random_points(100, -90, 90, -180, 180)
 run_executable("client/client", coords)
