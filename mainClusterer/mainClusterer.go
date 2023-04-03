@@ -61,6 +61,11 @@ func main() {
 		fmt.Println(clusterNums)
 		end := time.Now()
 		fmt.Println("execution time of kmeans: ", end.Sub(start))
+		ll := []int{0, 0, 0, 0, 0}
+		for _, value := range clusterNums {
+			ll[value] += 1
+		}
+		fmt.Println("distribution of kmeans: ", ll)
 		//		tempcorelist := coresetList.List
 		coresetList.Clear()
 		//
