@@ -59,9 +59,9 @@ func main() {
 		// TODO union of coresets
 		clusterNums := coresetUnion()
 		fmt.Println(clusterNums)
-//		tempcorelist := coresetList.List
-//		coresetList.Clear()
-//
+		//		tempcorelist := coresetList.List
+		coresetList.Clear()
+		//
 		// find ClusterRepresentation Info to send to client
 		//coreunion := map[Node]Node{}
 		//corelist := tempcorelist
