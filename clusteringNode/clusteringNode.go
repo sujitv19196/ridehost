@@ -66,12 +66,15 @@ func acceptConnections() {
 func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClustererClusteringNodeResponse) error {
 	fmt.Println("request from: ", string(request.NodeRequest.Uuid[:]))
 	go ML.Append(request.NodeRequest)
-	fmt.Println("Membership List: ", ML.List)
 	response.Message = "ACK"
 	return nil
 }
 
 func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererClusteringNodeResponse) error {
+	fmt.Println("Membership List: ")
+	for _, elem := range ML.List {
+		fmt.Print(elem.Uuid, " ")
+	}
 	go func() {
 		coreset := Coreset{}
 

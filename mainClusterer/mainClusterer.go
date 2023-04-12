@@ -183,7 +183,7 @@ func sendClusterInfo(node Node, clusterinfo ClusterInfo) {
 	}
 	client := rpc.NewClient(conn)
 	response := new(ClientMainClustererResponse)
-	fmt.Println("send this clusterRep and clusterNum from main: ", clusterinfo)
+	fmt.Println("Node ", clusterinfo.NodeItself.Uuid, "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", clusterinfo.ClusterRep.Uuid)
 
 	err = client.Call("ClientRPC.RecvClusterInfo", clusterinfo, &response)
 	if err != nil {
