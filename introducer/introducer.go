@@ -30,14 +30,6 @@ func main() {
 		log.Fatal("listen error:", err)
 	}
 	rpc.Accept(conn)
-
-	// clusterResponse := sendClusteringRPC(0, IntroducerClusterRequest{Uuid: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
-	// 	Lat: 23,
-	// 	Lng: 24}) // get assinged clsuter group back
-
-	// // give repsonse to client
-	// r := ClientIntroducerResponse{ClusterNum: clusterResponse.ClusterNum, Error: clusterResponse.Error}
-	// fmt.Println(r.ClusterNum)
 }
 
 // RPC exectued by introducer when new joins occur

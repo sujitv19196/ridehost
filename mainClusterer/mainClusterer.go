@@ -54,12 +54,12 @@ func main() {
 		for len(coresetList.List) < len(clusteringNodes) {
 			coresetList.cond.Wait()
 		}
-		coresetList.mu.Unlock()
-
-		// TODO union of coresets
+		// take union of coresets
 		clusterNums := coresetUnion()
+		// make cope list and then clear list
 		tempcorelist := coresetList.List
-		coresetList.Clear()
+		coresetList.List = nil
+		coresetList.mu.Unlock()
 
 		// find ClusterRepresentation Info to send to client
 		coreunion := map[Node]Node{}
@@ -100,8 +100,6 @@ func (m *MainClustererRPC) ClusteringRequest(request JoinRequest, response *Intr
 	fmt.Println("hello")
 	go sendClusteringRPC(request)
 	response.Message = "ACK"
-	// totalclient.Increment() //increment count of t when a client request is sent to a clusteringnode
-	// fmt.Println("Total Client Count", totalclient.count)
 	return nil
 }
 
@@ -146,7 +144,7 @@ func sendStartClusteringRPC(clusterIp string) {
 
 func (m *MainClustererRPC) RecvCoreset(coreset Coreset, response *MainClustererClusteringNodeResponse) error {
 	// add coreset to list
-	coresetList.Append(coreset)
+	go coresetList.Append(coreset)
 	response.Message = "ACK"
 	return nil
 }
@@ -159,7 +157,6 @@ func (m *MainClustererRPC) RecvCoreset(coreset Coreset, response *MainClustererC
 // ]
 // }
 func coresetUnion() map[Node]int {
-	//TODO
 	// outputs Node -> clusterNum
 	coreunion := map[Node]int{}
 	corelist := coresetList.List
@@ -175,10 +172,9 @@ func coresetUnion() map[Node]int {
 
 	fmt.Println("CoreUnion: ", coreunion)
 	return coreunion
-	// n := Node{NodeType: Driver, Ip: nil, Uuid: [16]byte{}, Lat: 24, Lng: 25}
-	// return map[Node]int{n: 1}
 }
 
+// send cluster info to client nodes
 func sendClusterInfo(node Node, clusterinfo ClusterInfo) {
 	fmt.Println("Send cluster info to: ", node.Ip)
 	conn, err := net.Dial("tcp", node.Ip)
