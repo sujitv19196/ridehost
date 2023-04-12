@@ -29,7 +29,7 @@ var nodeItself Node
 func main() {
 	if len(os.Args) != 5 {
 		fmt.Println("format: ./client nodeType introducerIp lat lng")
-		os.Exit(1)
+		os.Exit(0)
 	}
 	clientIp = getMyIp()
 	uuid := uuid.New()
@@ -40,9 +40,9 @@ func main() {
 	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
-	// wg.Add(1)
 	acceptClusteringConnections()
-	// wg.Wait()
+
+	// form ring and start bidding
 }
 
 // command called by a client to join the system
@@ -68,7 +68,6 @@ func (c *ClientRPC) RecvClusterInfo(clusterInfo ClusterInfo, response *Response)
 	clusterRep = clusterInfo.ClusterRep
 	clusterNum = clusterInfo.ClusterNum
 	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
-	os.Exit(0)
 	return nil
 }
 
@@ -76,7 +75,6 @@ func acceptClusteringConnections() {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["client"]))
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 	clientRPC := new(ClientRPC)
 	rpc.Register(clientRPC)

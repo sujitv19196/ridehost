@@ -2,3 +2,4 @@ client/client
 introducer/introducer
 mainclusterer/mainclusterer
 clusteringnode/clusteringnode
+output.log
