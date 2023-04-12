@@ -97,7 +97,6 @@ func acceptConnections() {
 }
 
 func (m *MainClustererRPC) ClusteringRequest(request JoinRequest, response *IntroducerMainClustererResponse) error {
-	fmt.Println("hello")
 	go sendClusteringRPC(request)
 	response.Message = "ACK"
 	return nil
