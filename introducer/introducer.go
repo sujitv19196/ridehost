@@ -45,12 +45,12 @@ func forwardRequestToMainClusterer(request JoinRequest) {
 	conn, err := net.Dial("tcp", mainClustererIp)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
+		return
 	}
 	client := rpc.NewClient(conn)
 	mainClustererResponse := new(IntroducerMainClustererResponse)
 	err = client.Call("MainClustererRPC.ClusteringRequest", request, &mainClustererResponse)
 	if err != nil {
-		log.Fatal("MainClustererRPC.ClusteringRequest error: ", err)
+		os.Stderr.WriteString("MainClustererRPC.ClusteringRequest error: " + err.Error())
 	}
 }

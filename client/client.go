@@ -29,7 +29,7 @@ var nodeItself Node
 func main() {
 	if len(os.Args) != 5 {
 		fmt.Println("format: ./client nodeType introducerIp lat lng")
-		os.Exit(1)
+		os.Exit(0)
 	}
 	clientIp = getMyIp()
 	uuid := uuid.New()
@@ -75,7 +75,6 @@ func acceptClusteringConnections() {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["client"]))
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 	clientRPC := new(ClientRPC)
 	rpc.Register(clientRPC)

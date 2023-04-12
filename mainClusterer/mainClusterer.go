@@ -85,7 +85,6 @@ func acceptConnections() {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["mainClusterer"]))
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 	mainClustererRPC := new(MainClustererRPC)
 	rpc.Register(mainClustererRPC)
@@ -111,7 +110,7 @@ func sendClusteringRPC(request JoinRequest) {
 	conn, err := net.Dial("tcp", clusteringNodes[clusterNum])
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
+		return
 	}
 
 	client := rpc.NewClient(conn)
@@ -119,7 +118,7 @@ func sendClusteringRPC(request JoinRequest) {
 
 	// send clustering request to clusterNum clustering Node
 	if client.Call("ClusteringNodeRPC.Cluster", request, &clusterResponse) != nil {
-		log.Fatal("ClusteringNodeRPC.Cluster error: ", err)
+		os.Stderr.WriteString("ClusteringNodeRPC.Cluster error: " + err.Error())
 	}
 }
 
@@ -128,7 +127,7 @@ func sendStartClusteringRPC(clusterIp string) {
 	conn, err := net.Dial("tcp", clusterIp)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
+		return
 	}
 
 	client := rpc.NewClient(conn)
@@ -137,7 +136,7 @@ func sendStartClusteringRPC(clusterIp string) {
 
 	// send start clustering request to clusterNum clustering Node
 	if client.Call("ClusteringNodeRPC.StartClustering", 0, &clusterResponse) != nil {
-		log.Fatal("ClusteringNodeRPC.StartClustering error: ", err)
+		os.Stderr.WriteString("ClusteringNodeRPC.StartClustering error: " + err.Error())
 	}
 }
 
@@ -183,10 +182,10 @@ func sendClusterInfo(node Node, clusterinfo ClusterInfo) {
 	}
 	client := rpc.NewClient(conn)
 	response := new(ClientMainClustererResponse)
-	fmt.Println("Node ", clusterinfo.NodeItself.Uuid, "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", clusterinfo.ClusterRep.Uuid)
+	fmt.Println("Node ", string(clusterinfo.NodeItself.Uuid[:]), "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", string(clusterinfo.ClusterRep.Uuid[:]))
 
 	err = client.Call("ClientRPC.RecvClusterInfo", clusterinfo, &response)
 	if err != nil {
-		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
+		os.Stderr.WriteString("IntroducerRPC.ClientJoin error: " + err.Error())
 	}
 }

@@ -107,13 +107,13 @@ func sendCoreset(coreset Coreset) {
 	conn, err := net.Dial("tcp", mainClustererIp)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
+		return
 	}
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
 
 	if client.Call("MainClustererRPC.RecvCoreset", coreset, &clusterResponse) != nil {
-		log.Fatal("MainClustererRPC.RecvCoreset error: ", err)
+		os.Stderr.WriteString("MainClustererRPC.RecvCoreset error: " + err.Error())
 	}
 }
