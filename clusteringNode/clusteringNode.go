@@ -73,7 +73,7 @@ func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClusterer
 func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererClusteringNodeResponse) error {
 	fmt.Println("Membership List: ")
 	for _, elem := range ML.List {
-		fmt.Print(elem.Uuid, " ")
+		fmt.Print(string(elem.Uuid[:]))
 	}
 	go func() {
 		coreset := Coreset{}
