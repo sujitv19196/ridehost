@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-var Ports = map[string]int{"introducer": 2233, "mainClusterer": 2234, "clusteringNode": 2235, "acceptPings": 2236, "clientRPC": 2237}
+var Ports = map[string]int{"introducer": 2233, "mainClusterer": 2234, "clusteringNode": 2235, "acceptPings": 2236, "client": 2237, "clientRPC": 2238}
 
 const PingFrequency = 3 * time.Second
 

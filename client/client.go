@@ -15,11 +15,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ClientRPC struct{} // RPC
 
-var ip *net.TCPAddr
+var clientIp string
 
 var myIP net.IP
 var myIPStr string
@@ -67,15 +69,31 @@ func main() {
 	// r := joinSystem(req)
 	// fmt.Println("From Introducer: ", r.Message)
 
-	go acceptPings()
-	go sendPings()
 	acceptClusteringConnections()
+
+	clientIp = getMyIp()
+	uuid := uuid.New()
+	nodeType, _ := strconv.Atoi(os.Args[1])
+
+	lat, _ := strconv.ParseFloat(os.Args[3], 64)
+	lng, _ := strconv.ParseFloat(os.Args[4], 64)
+
+	go sendPings()
+	go acceptPings()
+
+	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
+	r := joinSystem(req)
+	fmt.Println("From Introducer: ", r.Message)
+
+	acceptClusteringConnections()
+
+	// form ring and start bidding
 }
 
 // command called by a client to join the system
 func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	// request to introducer
-	conn, err := net.Dial("tcp", request.IntroducerIp)
+	conn, err := net.Dial("tcp", request.IntroducerIp+":"+strconv.Itoa(Ports["introducer"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
@@ -293,12 +311,22 @@ func acceptClusteringConnections() {
 	rpc.Accept(conn)
 }
 
-func getMyIp(portNumber int) *net.TCPAddr {
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(portNumber))
+func getMyIp() string {
+	ief, err := net.InterfaceByName("eth0")
 	if err != nil {
 		log.Fatal(err)
 	}
-	return address
+	addrs, err := ief.Addrs()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tcpAddr := &net.TCPAddr{
+		IP: addrs[0].(*net.IPNet).IP,
+	}
+	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["client"])
+	fmt.Println(ipstr)
+	return ipstr
 }
 
 // client requests introduicer

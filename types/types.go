@@ -1,7 +1,5 @@
 package types
 
-import "net"
-
 const (
 	Driver  int = 0
 	Rider   int = 1
@@ -10,7 +8,7 @@ const (
 
 type Node struct {
 	NodeType int
-	Ip       *net.TCPAddr
+	Ip       string
 	Uuid     [16]byte
 	Lat      float64
 	Lng      float64
