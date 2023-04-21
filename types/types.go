@@ -63,3 +63,29 @@ type ClientMainClustererResponse struct {
 	Message string
 	Error   error
 }
+
+type ClientClusterJoinRequest struct {
+	ClusterNum   int
+	ClusterRepIP string
+	Members      []string
+}
+
+type ClientClusterJoinResponse struct {
+	Ack bool
+}
+
+type ClientClusterPingingStatusRequest struct {
+	Status bool
+}
+
+type ClientClusterPingingStatusResponse struct {
+	Ack bool
+}
+
+type ClusterNodeRemovalRequest struct {
+	NodeIP string
+}
+
+type ClusterNodeRemovalResponse struct {
+	Ack bool
+}
