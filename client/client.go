@@ -63,7 +63,8 @@ func main() {
 	myIPStr = myIP.String()
 	conn.Close()
 
-	clientIp = getMyIp()
+	clientIp = myIPStr + ":" + strconv.Itoa(Ports["clientRPC"]) //add port to IP
+	fmt.Println(clientIp)
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
 
@@ -437,23 +438,23 @@ func acceptClusteringConnections() {
 	rpc.Accept(conn)
 }
 
-func getMyIp() string {
-	ief, err := net.InterfaceByName("eth0")
-	if err != nil {
-		log.Fatal(err)
-	}
-	addrs, err := ief.Addrs()
-	if err != nil {
-		log.Fatal(err)
-	}
+// func getMyIp() string {
+// 	ief, err := net.InterfaceByName("eth0")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	addrs, err := ief.Addrs()
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	tcpAddr := &net.TCPAddr{
-		IP: addrs[0].(*net.IPNet).IP,
-	}
-	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["clientRPC"])
-	fmt.Println(ipstr)
-	return ipstr
-}
+// 	tcpAddr := &net.TCPAddr{
+// 		IP: addrs[0].(*net.IPNet).IP,
+// 	}
+// 	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["clientRPC"])
+// 	fmt.Println(ipstr)
+// 	return ipstr
+// }
 
 // client requests introduicer
 // client gets back cluster number and cluster represnteitnve
