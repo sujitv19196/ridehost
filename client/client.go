@@ -10,7 +10,10 @@ import (
 	"os"
 	"ridehost/cll"
 	"ridehost/constants"
+	. "ridehost/constants"
 	"ridehost/types"
+	. "ridehost/types"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +23,12 @@ import (
 )
 
 type ClientRPC struct{} // RPC
+
+// rider auction state
+type RiderAuctionState struct {
+	mu          sync.Mutex
+	acceptedBid bool
+}
 
 var clientIp string
 
@@ -35,7 +44,7 @@ var clusterRepIP string
 var clusterNum int
 var nodeItself types.Node
 
-// var wg sync.WaitGroup
+var riderAuctionState RiderAuctionState
 
 func main() {
 	if len(os.Args) != 5 {
@@ -61,16 +70,6 @@ func main() {
 	myIPStr = myIP.String()
 	conn.Close()
 
-	// uuid := uuid.New()
-	// nodeType, _ := strconv.Atoi(os.Args[1])
-	// lat, _ := strconv.ParseFloat(os.Args[3], 64)
-	// lng, _ := strconv.ParseFloat(os.Args[4], 64)
-	// req := types.JoinRequest{NodeRequest: types.Node{NodeType: nodeType, Ip: ip, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
-	// r := joinSystem(req)
-	// fmt.Println("From Introducer: ", r.Message)
-
-	acceptClusteringConnections()
-
 	clientIp = getMyIp()
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
@@ -81,7 +80,7 @@ func main() {
 	go sendPings()
 	go acceptPings()
 
-	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
+	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: lat, StartLng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
 
@@ -108,11 +107,12 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	return *response
 }
 
-func (c *ClientRPC) JoinCluster(request types.ClientClusterJoinRequest, response *types.ClientClusterJoinResponse) error {
+func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *ClientClusterJoinResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
+	nodeItself = request.NodeItself
 	clusterNum = request.ClusterNum
-	clusterRepIP = request.ClusterRepIP
+	clusterRepIP = request.ClusterRep.Ip
 	isRep = clusterRepIP == myIPStr
 	virtRing = &cll.UniqueCLL{}
 	virtRing.SetDefaults()
@@ -122,6 +122,9 @@ func (c *ClientRPC) JoinCluster(request types.ClientClusterJoinRequest, response
 	joined = true
 	log.Println("joined cluster")
 	response.Ack = true
+	if nodeItself.NodeType == Driver {
+		go sendBid()
+	}
 	return nil
 }
 
@@ -287,14 +290,139 @@ func sendListRemoval(neighborIp string, IPs []string) {
 	}
 }
 
-func (c *ClientRPC) RecvClusterInfo(clusterInfo types.ClusterInfo, response *types.ClientMainClustererResponse) error {
+// func (c *ClientRPC) RecvClusterInfo(clusterInfo types.ClusterInfo, response *types.ClientMainClustererResponse) error {
+// 	mu.Lock()
+// 	nodeItself = clusterInfo.NodeItself
+// 	clusterRep := clusterInfo.ClusterRep
+// 	clusterNum = clusterInfo.ClusterNum
+// 	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
+// 	mu.Unlock()
+// 	return nil
+// }
+
+// rider receiving a bid
+func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) {
+	riderAuctionState.mu.Lock()
+	defer riderAuctionState.mu.Unlock()
+	response.Response = true
+	if riderAuctionState.acceptedBid { // if the rider already accepted a bid
+		response.Accept = false
+		return
+	}
+
+	if bid.Cost < RiderMaxCost { // if bid is within ddrivere price range
+		response.Accept = true
+	} else {
+		response.Accept = false
+	}
+}
+
+func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response types.RiderInfo) {
+	fmt.Println(driverInfo.PhoneNumber)
+	response.Response = true
+	response.PhoneNumber = "phone number recvd!"
+}
+
+// driver sending a bid to a rider
+func sendBid() {
+	// get current list of riders in ring
 	mu.Lock()
-	nodeItself = clusterInfo.NodeItself
-	clusterRep := clusterInfo.ClusterRep
-	clusterNum = clusterInfo.ClusterNum
-	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
+	biddingPool := virtRing.GetNodes(true)
 	mu.Unlock()
-	return nil
+	// order list by cost (low to high)
+	sort.Slice(biddingPool, func(i, j int) bool {
+		biddingPool[i].Cost = driverCost(nodeItself, biddingPool[i])
+		biddingPool[j].Cost = driverCost(nodeItself, biddingPool[j])
+		return biddingPool[i].Cost < biddingPool[j].Cost
+	})
+	// loop thrugh list and send bid to each client
+	for _, rider := range biddingPool {
+		riderCost := riderCost(nodeItself, rider)
+		bidResponse := sendBidRPC(rider, riderCost)
+		if bidResponse.Response && bidResponse.Accept {
+			// driver either accepts or declines rider
+			// assume driver auto accept
+			driverInfo := types.DriverInfo{PhoneNumber: "drivernumber"}
+			riderInfo := sendDriveInfo(rider, driverInfo)
+			if riderInfo.Response { // matched, exit system on match
+				fmt.Println("Matched! Rider number: ", riderInfo.PhoneNumber)
+				os.Exit(0)
+			}
+		} // if no response, try next rider in biddingPool
+	}
+	// terminate if no match
+	os.Exit(0)
+}
+
+// cost functions and lat/lng distance calculations
+
+// driver cost is distance extra distance driven to pick up passanger
+func driverCost(driver types.Node, rider types.Node) float64 {
+	dstart_rstart := distanceBetweenCoords(driver.StartLat, driver.StartLng, rider.StartLat, rider.StartLng)
+	rstart_rend := distanceBetweenCoords(rider.StartLat, rider.StartLng, rider.DestLat, rider.DestLng)
+	// assume driver end is same as riders end dest
+	dstart_dend := distanceBetweenCoords(driver.StartLat, driver.StartLng, rider.DestLat, rider.DestLng)
+	return (dstart_rstart + rstart_rend) - dstart_dend
+}
+
+// rider cost is from their start to end dest + extra distance that the driver had to drive to pick them up
+func riderCost(driver types.Node, rider types.Node) float64 {
+	return driverCost(driver, rider) + distanceBetweenCoords(rider.StartLat, rider.StartLng, rider.DestLat, rider.DestLng)
+}
+
+func distanceBetweenCoords(lat1 float64, lng1 float64, lat2 float64, lng2 float64) float64 {
+	earthRadius := 6371.0 // Earth radius in kilometers
+
+	// Convert degrees to radians
+	lat1Rad := lat1 * math.Pi / 180
+	lng1Rad := lng1 * math.Pi / 180
+	lat2Rad := lat2 * math.Pi / 180
+	lng2Rad := lng2 * math.Pi / 180
+
+	// Calculate the distance using the Haversine formula
+	dLat := lat2Rad - lat1Rad
+	dLng := lng2Rad - lng1Rad
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(lat1Rad)*math.Cos(lat2Rad)*math.Sin(dLng/2)*math.Sin(dLng/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	distance := earthRadius * c
+	return distance
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+func sendBidRPC(node types.Node, cost float64) types.BidResponse {
+	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(Ports["clientRPC"]), constants.BidTimeout)
+	defer conn.Close()
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		return BidResponse{Response: false}
+	}
+
+	client := rpc.NewClient(conn)
+	response := new(types.BidResponse)
+
+	err = client.Call("ClientRPC.RecvBid", types.Bid{Cost: cost}, &response)
+	if err != nil {
+		log.Fatal("ClientRPC.RecvBid error: ", err)
+	}
+	return *response
+}
+
+func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
+	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(Ports["clientRPC"]), constants.BidTimeout)
+	defer conn.Close()
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		return RiderInfo{Response: false}
+	}
+
+	client := rpc.NewClient(conn)
+	response := new(RiderInfo)
+	err = client.Call("ClientRPC.RecvDriverInfo", driverInfo, &response)
+	if err != nil {
+		log.Fatal("ClientRPC.RecvBid error: ", err)
+	}
+	return *response
 }
 
 func acceptClusteringConnections() {
@@ -324,7 +452,7 @@ func getMyIp() string {
 	tcpAddr := &net.TCPAddr{
 		IP: addrs[0].(*net.IPNet).IP,
 	}
-	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["client"])
+	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["clientRPC"])
 	fmt.Println(ipstr)
 	return ipstr
 }

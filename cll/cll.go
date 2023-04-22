@@ -2,12 +2,14 @@ package cll
 
 import (
 	"fmt"
+	"ridehost/types"
 )
 
 type Node struct {
-	prev *Node
-	next *Node
-	key  string
+	prev     *Node
+	next     *Node
+	key      string
+	nodeinfo types.Node
 }
 
 // Initialize a Node with default values
@@ -57,9 +59,10 @@ func (L *UniqueCLL) GetHead() string {
 	return L.head.key
 }
 
-func (L *UniqueCLL) PushBack(key string) {
+func (L *UniqueCLL) PushBack(node types.Node) {
 	// L.mu.Lock()
 	// defer L.mu.Unlock()
+	key := node.Uuid.String()
 	_, pres := L.pos_map[key]
 	if pres {
 		return
@@ -67,6 +70,7 @@ func (L *UniqueCLL) PushBack(key string) {
 	new_node := &Node{}
 	new_node.SetDefaults()
 	new_node.key = key
+	new_node.nodeinfo = node
 
 	if L.head == nil {
 		L.head = new_node
@@ -140,6 +144,23 @@ func (L *UniqueCLL) GetList() []string {
 	curr_node := L.head
 	for i := 0; i < L.size; i++ {
 		machine_ids = append(machine_ids, curr_node.key)
+		curr_node = curr_node.next
+	}
+	return machine_ids
+}
+
+// gets the nodeinfo for each node in the ring
+func (L *UniqueCLL) GetNodes(onlyRiders bool) []types.Node {
+	var machine_ids []types.Node
+	curr_node := L.head
+	for i := 0; i < L.size; i++ {
+		if onlyRiders { // only add node to list if it is a rider node
+			if curr_node.nodeinfo.NodeType == types.Rider {
+				machine_ids = append(machine_ids, curr_node.nodeinfo)
+			}
+		} else { // if onlyRiders is disabled just add all nodes
+			machine_ids = append(machine_ids, curr_node.nodeinfo)
+		}
 		curr_node = curr_node.next
 	}
 	return machine_ids

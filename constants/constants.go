@@ -15,3 +15,7 @@ const NumClusters = 5
 const ClusteringPeriod = 1 // in minutes
 
 const TCPTimeout = time.Minute / 12
+
+const BidTimeout = time.Second * 5 // 5 seconds
+
+const RiderMaxCost float64 = 25.0 //km

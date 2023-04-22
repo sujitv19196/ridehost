@@ -1,5 +1,7 @@
 package types
 
+import "github.com/google/uuid"
+
 const (
 	Driver  int = 0
 	Rider   int = 1
@@ -9,9 +11,12 @@ const (
 type Node struct {
 	NodeType int
 	Ip       string
-	Uuid     [16]byte
-	Lat      float64
-	Lng      float64
+	Uuid     uuid.UUID
+	StartLat float64
+	StartLng float64
+	DestLat  float64
+	DestLng  float64
+	Cost     float64
 }
 
 type JoinRequest struct {
@@ -53,21 +58,16 @@ type ClusterResult struct {
 	RepresentCenterNodes  []Node
 }
 
-type ClusterInfo struct {
-	NodeItself Node
-	ClusterRep Node
-	ClusterNum int
-}
-
 type ClientMainClustererResponse struct {
 	Message string
 	Error   error
 }
 
 type ClientClusterJoinRequest struct {
-	ClusterNum   int
-	ClusterRepIP string
-	Members      []string
+	ClusterNum int
+	ClusterRep Node
+	NodeItself Node
+	Members    []Node
 }
 
 type ClientClusterJoinResponse struct {
@@ -88,4 +88,22 @@ type ClusterNodeRemovalRequest struct {
 
 type ClusterNodeRemovalResponse struct {
 	Ack bool
+}
+
+type Bid struct {
+	Cost float64
+}
+
+type BidResponse struct {
+	Response bool
+	Accept   bool
+}
+
+type DriverInfo struct {
+	PhoneNumber string
+}
+
+type RiderInfo struct {
+	Response    bool
+	PhoneNumber string
 }

@@ -71,10 +71,10 @@ func main() {
 				}
 			}
 		}
-
+		// TODO List of members of cluster
 		// send RPCs to clients with their cluster rep ip
 		for node, clusterNum := range clusterNums {
-			clusterinfo := ClusterInfo{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum}
+			clusterinfo := ClientClusterJoinRequest{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum}
 			go sendClusterInfo(node, clusterinfo)
 		}
 	}
@@ -173,7 +173,7 @@ func coresetUnion() map[Node]int {
 }
 
 // send cluster info to client nodes
-func sendClusterInfo(node Node, clusterinfo ClusterInfo) {
+func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
 	fmt.Println("Send cluster info to: ", node.Ip)
 	conn, err := net.Dial("tcp", node.Ip)
 	if err != nil {
