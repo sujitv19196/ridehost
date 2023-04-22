@@ -20,7 +20,7 @@ func main() {
 	var joinConns []*net.Conn
 
 	for _, client := range clients {
-		conn, err := net.DialTimeout("tcp", client+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
+		conn, err := net.DialTimeout("tcp", client+":"+strconv.Itoa(constants.Ports["failureDetector"]), constants.TCPTimeout)
 		if err != nil {
 			os.Stderr.WriteString(err.Error() + "\n")
 			os.Exit(1)
@@ -53,7 +53,7 @@ func main() {
 	var pingConns []*net.Conn
 
 	for _, client := range clients {
-		conn, err := net.DialTimeout("tcp", client+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
+		conn, err := net.DialTimeout("tcp", client+":"+strconv.Itoa(constants.Ports["failureDetector"]), constants.TCPTimeout)
 		if err != nil {
 			os.Stderr.WriteString(err.Error() + "\n")
 			os.Exit(1)
@@ -64,7 +64,7 @@ func main() {
 		pingResponses = append(pingResponses, response)
 		request := types.ClientClusterPingingStatusRequest{}
 		request.Status = true
-		pingPromises = append(pingPromises, client.Go("ClientRPC.StartPinging", request, response, nil))
+		pingPromises = append(pingPromises, client.Go("FailureDetectorRPC.StartPings", request, response, nil))
 		if err != nil {
 			log.Fatal("StartPinging error: ", err)
 		}
