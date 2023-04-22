@@ -71,10 +71,16 @@ func main() {
 				}
 			}
 		}
+
+		clusterMemberes := make(map[int][]Node, len(coreunion))
+		for k, v := range clusterNums {
+			clusterMemberes[v] = append(clusterMemberes[v], k)
+		}
 		// TODO List of members of cluster
 		// send RPCs to clients with their cluster rep ip
 		for node, clusterNum := range clusterNums {
-			clusterinfo := ClientClusterJoinRequest{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum}
+			clusterinfo := ClientClusterJoinRequest{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum,
+				Members: clusterMemberes[clusterNum]}
 			go sendClusterInfo(node, clusterinfo)
 		}
 	}
