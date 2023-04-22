@@ -92,6 +92,7 @@ func acceptConnections() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
+	defer conn.Close()
 	rpc.Accept(conn)
 }
 
@@ -112,6 +113,7 @@ func sendClusteringRPC(request JoinRequest) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
@@ -129,6 +131,7 @@ func sendStartClusteringRPC(clusterIp string) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	// var clusterResponse *MainClustererClusteringNodeResponse
@@ -180,6 +183,7 @@ func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 	client := rpc.NewClient(conn)
 	response := new(ClientMainClustererResponse)
 	fmt.Println("Node ", string(clusterinfo.NodeItself.Uuid[:]), "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", string(clusterinfo.ClusterRep.Uuid[:]))

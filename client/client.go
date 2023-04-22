@@ -59,13 +59,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	mu = sync.Mutex{}
-
-	mu.Lock()
-	joined = false
-	startPinging = false
-	mu.Unlock()
-
 	myIP = conn.LocalAddr().(*net.UDPAddr).IP
 	myIPStr = myIP.String()
 	conn.Close()
@@ -77,16 +70,19 @@ func main() {
 	lat, _ := strconv.ParseFloat(os.Args[3], 64)
 	lng, _ := strconv.ParseFloat(os.Args[4], 64)
 
-	go sendPings()
-	go acceptPings()
-
 	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: lat, StartLng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
 
-	acceptClusteringConnections()
+	mu = sync.Mutex{}
+	mu.Lock()
+	joined = false
+	startPinging = false
+	mu.Unlock()
+	go sendPings()
+	go acceptPings()
 
-	// form ring and start bidding
+	acceptClusteringConnections()
 }
 
 // command called by a client to join the system
@@ -97,6 +93,7 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	response := new(types.ClientIntroducerResponse)
@@ -436,6 +433,7 @@ func acceptClusteringConnections() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
+	defer conn.Close()
 	rpc.Accept(conn)
 }
 

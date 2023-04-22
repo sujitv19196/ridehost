@@ -58,6 +58,7 @@ func acceptConnections() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
+	defer conn.Close()
 	rpc.Accept(conn)
 }
 
@@ -109,6 +110,7 @@ func sendCoreset(coreset Coreset) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
