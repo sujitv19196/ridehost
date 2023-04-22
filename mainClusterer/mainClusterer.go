@@ -188,8 +188,8 @@ func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
 	response := new(ClientMainClustererResponse)
 	fmt.Println("Node ", clusterinfo.NodeItself.Uuid.String(), "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", clusterinfo.ClusterRep.Uuid.String())
 
-	err = client.Call("ClientRPC.RecvClusterInfo", clusterinfo, &response)
+	err = client.Call("ClientRPC.JoinCluster", clusterinfo, &response)
 	if err != nil {
-		os.Stderr.WriteString("IntroducerRPC.ClientJoin error: " + err.Error())
+		os.Stderr.WriteString("ClientRPC.ClientJoin error: " + err.Error())
 	}
 }
