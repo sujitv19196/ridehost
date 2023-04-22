@@ -81,7 +81,7 @@ func main() {
 	go sendPings()
 	go acceptPings()
 
-	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
+	req := types.JoinRequest{NodeRequest: types.Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, Lat: lat, Lng: lng}, IntroducerIp: os.Args[2]}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
 
@@ -93,7 +93,7 @@ func main() {
 // command called by a client to join the system
 func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	// request to introducer
-	conn, err := net.Dial("tcp", request.IntroducerIp+":"+strconv.Itoa(Ports["introducer"]))
+	conn, err := net.Dial("tcp", request.IntroducerIp+":"+strconv.Itoa(constants.Ports["introducer"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
@@ -324,7 +324,7 @@ func getMyIp() string {
 	tcpAddr := &net.TCPAddr{
 		IP: addrs[0].(*net.IPNet).IP,
 	}
-	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["client"])
+	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(constants.Ports["client"])
 	fmt.Println(ipstr)
 	return ipstr
 }
