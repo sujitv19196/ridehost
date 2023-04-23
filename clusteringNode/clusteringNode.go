@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"net/rpc"
 	"os"
@@ -11,6 +12,8 @@ import (
 	. "ridehost/types"
 	"strconv"
 	"sync"
+
+	"gonum.org/v1/gonum/stat/sampleuv"
 )
 
 type MembershipList struct {
@@ -36,8 +39,17 @@ var ML MembershipList
 
 // VM 2
 var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
+// var mainClustererIp = "0.0.0.0:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 
 type ClusteringNodeRPC bool
+
+// VM 3, 4, 5
+// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
+var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
+
+// var clusteringNodes = []string{"0.0.0.0:2235", "0.0.0.0:2238", "0.0.0.0:2239"}
+
+var clusteringNodesResponseList ResponseList
 
 // accepts connections from main clusterer
 // Cluster: takes cluster request and adds to membership list
@@ -58,22 +70,23 @@ func acceptConnections() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
+	defer conn.Close()
 	rpc.Accept(conn)
 }
 
 // cluster node accepts an RPC call from client node,
 // get the cluster using the kmeans clustering function and return.
 func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClustererClusteringNodeResponse) error {
-	fmt.Println("request from: ", string(request.NodeRequest.Uuid[:]))
+	fmt.Println("request from: ", request.NodeRequest.Uuid.String())
 	go ML.Append(request.NodeRequest)
 	response.Message = "ACK"
 	return nil
 }
 
 func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererClusteringNodeResponse) error {
-	fmt.Println("Membership List: ")
+	fmt.Println("Membership List: ", len(ML.List))
 	for _, elem := range ML.List {
-		fmt.Print(string(elem.Uuid[:]))
+    fmt.Print(elem.Uuid.String())
 	}
 	go func() {
 		coreset := Coreset{}
@@ -84,7 +97,16 @@ func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererCl
 			coreset = kMeansClustering()
 			// clear list after clutsering
 			ML.List = nil
+		} else { // call send CostMsg so that other clustering nodes stop waiting
+			// add := []string{"0.0.0.0:2235"}
+			add, _ := net.LookupIP("ispycode.com")
+			for _, node := range clusteringNodes {
+				if node != add[0].String() {
+					go sendCostMsg(node, 0.0, 0)
+				}
+			}
 		}
+
 		ML.mu.Unlock()
 		// RPC call
 		sendCoreset(coreset)
@@ -96,9 +118,11 @@ func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererCl
 func kMeansClustering() Coreset {
 	// Calling the centralized K means clustering for current implementation
 	// it returns cluster type and we will create a coreset type from it
-	clusterresult := ClusterResult{}
-	clusterresult = CentralizedKMeansClustering(ML.List, NumClusters)
-	coreset := Coreset{Coreset: []Point{}, CoresetNodes: []Node{}, Tempcluster: clusterresult.ClusterMaps}
+	// clusterresult := ClusterResult{}
+	// clusterresult = CentralizedKMeansClustering(ML.List, NumClusters)
+	// coreset := Coreset{Coreset: []Point{}, CoresetNodes: []Node{}, Tempcluster: clusterresult.ClusterMaps}
+	coreset := Coreset{}
+	coreset = IndividualKMeansClustering(ML.List, NumClusters)
 	return coreset
 }
 
@@ -109,6 +133,7 @@ func sendCoreset(coreset Coreset) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
@@ -117,3 +142,282 @@ func sendCoreset(coreset Coreset) {
 		os.Stderr.WriteString("MainClustererRPC.RecvCoreset error: " + err.Error())
 	}
 }
+
+type ResponseList struct {
+	mu   sync.Mutex
+	cond sync.Cond
+	List []CostMsg
+}
+
+func (c *ResponseList) Append(elem CostMsg) {
+	c.mu.Lock()
+	c.List = append(c.List, elem)
+	c.mu.Unlock()
+	c.cond.Signal()
+}
+
+func (c *ResponseList) Clear() {
+	c.mu.Lock()
+	c.List = nil
+	c.mu.Unlock()
+}
+
+func (m *ClusteringNodeRPC) RecvCostMsg(data CostMsg, response *ClusteringNodeClusteringNodeResponse) error {
+	fmt.Println("recieved msg ? ", data)
+	// add data to list
+	go clusteringNodesResponseList.Append(data)
+	response.Message = "ACK"
+	return nil
+}
+
+// calls ClusteringNodes.RecvCostMsg to give it computed cost and length of membershiplist
+func sendCostMsg(nodeIP string, cost float64, length int) {
+	fmt.Println("sendingcost msg to : ", nodeIP)
+	conn, err := net.Dial("tcp", nodeIP)
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		return
+	}
+
+	client := rpc.NewClient(conn)
+	costResponse := new(ClusteringNodeClusteringNodeResponse)
+	data := CostMsg{NodeIp: nodeIP, Cost: cost, LengthML: length}
+	fmt.Println("data to sendd: ", data)
+	if err := client.Call("ClusteringNodeRPC.RecvCostMsg", data, &costResponse); err != nil {
+		os.Stderr.WriteString("ClusteringNodeRPC.RecvCostMsg error: " + err.Error())
+	}
+}
+
+// K MEANS CLUSTERING
+
+func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
+
+	clusterresults := CentralizedKMeansClustering(Nodelist, k)
+	fmt.Println("centroids from centralized k means: ", clusterresults.Centroids)
+
+	centroids := clusterresults.Centroids
+	data := []Point{}
+	for i := 0; i < len(Nodelist); i++ {
+		lat := Nodelist[i].Lat
+		lng := Nodelist[i].Lng
+		pair := Point{X: lat, Y: lng}
+		data = append(data, pair)
+	}
+	//step 2: calculate approximate costs C(Pi, Bi)
+	costList := []float64{}
+	cost := 0.
+	for _, point := range data {
+		min_dis := 9999999999999999999999.
+		for _, center := range centroids {
+			cur_dis := euclideanDistance(point, center)
+			if cur_dis < min_dis {
+				min_dis = cur_dis
+			}
+		}
+		costList = append(costList, min_dis)
+		cost += min_dis * min_dis
+	}
+	fmt.Println("cost : ", cost)
+	fmt.Println("costList : ", costList)
+
+	// step 3: TODO Communicate cost to all other clustering nodes via RPC
+	// also communicate length of membership lists to calculate t
+
+	//k-means-clustering calls this in step 3.
+	// get this machine's IP address
+	add, _ := net.LookupIP("ispycode.com")
+	// add := []string{"0.0.0.0:2235"}
+	currMLLen := len(ML.List)
+	fmt.Println("add of this if from LookUpIP and lenML : ", add, add[0], currMLLen)
+	for _, node := range clusteringNodes {
+		if node != add[0].String() {
+			go sendCostMsg(node, cost, currMLLen)
+		}
+	}
+	clusteringNodesResponseList.cond = *sync.NewCond(&clusteringNodesResponseList.mu)
+	// wait for all responses to be recvd
+	clusteringNodesResponseList.mu.Lock()
+	for len(clusteringNodesResponseList.List) < len(clusteringNodes)-1 {
+		clusteringNodesResponseList.cond.Wait()
+	}
+
+	// as a result from step 3
+	// fmt.Println("did it reach here", len(clusteringNodesResponseList.List))
+	tempclusteringNodesResponseList := clusteringNodesResponseList.List
+	clusteringNodesResponseList.List = nil
+	clusteringNodesResponseList.mu.Unlock()
+
+	costFromAllClusteringNodes := []float64{}
+	t := 0
+	for _, response := range tempclusteringNodesResponseList {
+		costFromAllClusteringNodes = append(costFromAllClusteringNodes, response.Cost)
+		t = t + response.LengthML
+	}
+	t = t + len(ML.List) //add the length of ML of the node itself.
+	fmt.Println("value of t from all clustering nodes: ", t)
+	T := t / 2
+	fmt.Println("costFromAllClusteringNodes: ", costFromAllClusteringNodes)
+	sumOfCostOfAllClusteringNodes := 0.
+
+	for _, val := range costFromAllClusteringNodes {
+		sumOfCostOfAllClusteringNodes += val
+	}
+	sumOfCostOfAllClusteringNodes += cost
+	// Round 2 step 1 : Compute ti
+	ti := int(math.Floor((float64(T) * cost) / sumOfCostOfAllClusteringNodes))
+	fmt.Println("value of ti : ", ti)
+	if ti == 0 {
+		ti = 1
+	} else if ti >= currMLLen {
+		ti = currMLLen - 1
+	}
+	fmt.Println("updated value of ti : ", ti)
+	// ti = 4
+	// Round 2 step 2: multiply each cost by 2 to get mp
+	mp := []float64{}
+
+	for i := 0; i < len(costList); i++ {
+		mp = append(mp, 2*costList[i]+1e-31)
+	}
+
+	mpProb := []float64{}
+
+	for i := 0; i < len(costList); i++ {
+		mpProb = append(mpProb, (costList[i]+1e-31)/cost)
+	}
+
+	// Round 2 step 3: Non-uniform random sample 𝑆𝑖 of 𝑡𝑖 points from Pi, where for every 𝑞 ∈ 𝑃𝑖.
+	// Also find weights on q, wq
+
+	fmt.Println("mpProb: ", mpProb)
+	// fmt.Println("data: ", data)
+	w := sampleuv.NewWeighted(mpProb, nil)
+	q_indexes := []int{}
+	qp := []Point{}
+	fmt.Println("w: ", w)
+	// fmt.Println("w.Take(): ", w.Take())
+	for i := 0; i < ti; i++ {
+		index, _ := w.Take()
+		fmt.Println("index: ", index)
+		q_indexes = append(q_indexes, index)
+		qp = append(qp, data[index])
+	}
+
+	wq := []float64{}
+	num := 0.
+
+	fmt.Println("idhar aaya 1")
+	// add the mps of all other clustering nodes to the num.
+	// since mp=2*cost, the summation mp = 2* sum of all cost from all clustering nodes
+	num += (sumOfCostOfAllClusteringNodes * 2)
+
+	for _, index := range q_indexes {
+
+		denom := mp[index] * float64(T)
+		wq = append(wq, num/denom)
+	}
+	fmt.Println("idhar aaya 2 : ", wq)
+	// Round 2 step 4: Local k-centers (𝐵𝑖 ) are included to the coreset
+	// Also find Weight on b, wb
+
+	core := Coreset{}
+	coreset := qp
+	for _, point := range clusterresults.RepresentCenterPoints {
+		coreset = append(coreset, point)
+	}
+	weights := wq
+	wb := []float64{}
+	for _, centroid := range centroids {
+		// coreset = append(coreset, centroid)
+		pb := []Point{}
+		pb_indexes := []int{}
+		for idx, point := range data {
+			euc_dist := euclideanDistance(centroid, point)
+			if euc_dist == costList[idx] {
+				pb = append(pb, point)
+				pb_indexes = append(pb_indexes, idx)
+			}
+		}
+
+		// Finding Pb 𝑃 = {𝑝∈𝑃: 𝑑(𝑝,𝑏) = 𝑑(𝑝,𝐵)}
+		intersectionOfPbAndS := intersect(pb_indexes, q_indexes)
+		fmt.Println("(pb_indexes, q_indexes, wq)", pb_indexes, q_indexes, wq)
+		fmt.Println("idhar aaya 3", intersectionOfPbAndS)
+
+		sumOfWqs := 0.
+		for _, in := range intersectionOfPbAndS {
+			sumOfWqs += wq[in]
+		}
+		wb = append(wb, float64(len(pb))-sumOfWqs)
+		weights = append(weights, float64(len(pb))-sumOfWqs)
+		fmt.Println("idhar aaya 4 : ", wb)
+	}
+	fmt.Println("Final data : ", data)
+
+	fmt.Println("Final coreset : ")
+	fmt.Println("b : ", len(centroids), centroids)
+	fmt.Println("bp : ", len(clusterresults.RepresentCenterPoints), clusterresults.RepresentCenterPoints)
+	fmt.Println("qp : ", len(qp), qp)
+
+	fmt.Println("Final weights : ")
+	fmt.Println("wb : ", len(wb), wb)
+	fmt.Println("wq : ", len(wq), wq)
+
+	core.Coreset = coreset
+	core.Weights = weights
+	core.CoresetNodes = clusterresults.RepresentCenterNodes
+	core.Tempcluster = clusterresults.ClusterMaps
+
+	// result := ClusterResult{}
+	// result.Centroids = centroids
+	// result.Clusters = pointclusters
+	// result.ClusterMaps = clusterMaps
+	// result.RepresentCenterPoints = centerPointList
+	// result.RepresentCenterNodes = centerPointNodeList
+
+	return core
+
+}
+func intersect(slice1, slice2 []int) []int {
+	var intersect []int
+	for _, element1 := range slice1 {
+		for idx, element2 := range slice2 {
+			if element1 == element2 {
+				intersect = append(intersect, idx)
+			}
+		}
+	}
+	return intersect //return slice after intersection
+}
+
+func euclideanDistance(p1, p2 Point) float64 {
+	return math.Sqrt(math.Pow(p1.X-p2.X, 2) + math.Pow(p1.Y-p2.Y, 2))
+}
+
+// func main() {
+// 	acceptConnections()
+// n1 := Node{NodeType: Driver, Ip: "35", Uuid: uuid.New(), Lat: 24, Lng: 25}
+// n2 := Node{NodeType: Driver, Ip: "890", Uuid: uuid.New(), Lat: 1, Lng: 2}
+// n3 := Node{NodeType: Driver, Ip: "234", Uuid: uuid.New(), Lat: 12, Lng: 13}
+// n4 := Node{NodeType: Driver, Ip: "trfh", Uuid: uuid.New(), Lat: 5, Lng: 6}
+// n5 := Node{NodeType: Driver, Ip: "5676", Uuid: uuid.New(), Lat: 6, Lng: 5}
+// n6 := Node{NodeType: Driver, Ip: "23478", Uuid: uuid.New(), Lat: 1, Lng: 1}
+// n7 := Node{NodeType: Driver, Ip: "1279", Uuid: uuid.New(), Lat: 15, Lng: 15}
+// n8 := Node{NodeType: Driver, Ip: "11234", Uuid: uuid.New(), Lat: 16, Lng: 19}
+// n9 := Node{NodeType: Driver, Ip: "qwerty", Uuid: uuid.New(), Lat: 4, Lng: 8}
+// nlist := []Node{}
+// nlist = append(nlist, n1)
+// nlist = append(nlist, n2)
+// nlist = append(nlist, n3)
+// nlist = append(nlist, n4)
+// nlist = append(nlist, n5)
+// nlist = append(nlist, n6)
+// nlist = append(nlist, n7)
+// nlist = append(nlist, n8)
+// nlist = append(nlist, n9)
+
+// // clusterresult := CentralizedKMeansClustering(nlist, 3)
+// // fmt.Println("clusterresult", clusterresult)
+// clusterresult := IndividualKMeansClustering(nlist, 3)
+// fmt.Println("clusterresult", clusterresult)
+// }
