@@ -114,11 +114,13 @@ func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *Clie
 	isRep = clusterRepIP == myIPStr
 	virtRing = &cll.UniqueCLL{}
 	virtRing.SetDefaults()
+	log.Print("Cluster Membership List: ")
 	for _, member := range request.Members {
 		virtRing.PushBack(member)
+		fmt.Print(member.Uuid.String() + ", ")
 	}
 	joined = true
-	log.Println("joined cluster")
+	log.Println("Joined Cluster #", clusterNum)
 	response.Ack = true
 	if nodeItself.NodeType == Driver {
 		go sendBid()
