@@ -58,13 +58,14 @@ func acceptConnections() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
+	defer conn.Close()
 	rpc.Accept(conn)
 }
 
 // cluster node accepts an RPC call from client node,
 // get the cluster using the kmeans clustering function and return.
 func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClustererClusteringNodeResponse) error {
-	fmt.Println("request from: ", string(request.NodeRequest.Uuid[:]))
+	fmt.Println("request from: ", request.NodeRequest.Uuid.String())
 	go ML.Append(request.NodeRequest)
 	response.Message = "ACK"
 	return nil
@@ -73,7 +74,7 @@ func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClusterer
 func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererClusteringNodeResponse) error {
 	fmt.Println("Membership List: ")
 	for _, elem := range ML.List {
-		fmt.Print(string(elem.Uuid[:]))
+		fmt.Print(elem.Uuid.String())
 	}
 	go func() {
 		coreset := Coreset{}
@@ -109,6 +110,7 @@ func sendCoreset(coreset Coreset) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)

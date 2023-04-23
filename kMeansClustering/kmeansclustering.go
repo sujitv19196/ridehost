@@ -16,8 +16,8 @@ import (
 func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	data := []Point{}
 	for i := 0; i < len(Nodelist); i++ {
-		lat := Nodelist[i].Lat
-		lng := Nodelist[i].Lng
+		lat := Nodelist[i].StartLat
+		lng := Nodelist[i].StartLng
 		pair := Point{X: lat, Y: lng}
 		data = append(data, pair)
 	}
@@ -92,9 +92,9 @@ func IndividualKMeansClustering(Nodelist []Node, k int, t int) Coreset {
 	centroids := clusterresults.Centroids
 	data := []Point{}
 	for i := 0; i < len(Nodelist); i++ {
-		lat := Nodelist[i].Lat
-		lng := Nodelist[i].Lng
-		pair := Point{lat, lng}
+		lat := Nodelist[i].StartLat
+		lng := Nodelist[i].StartLng
+		pair := Point{X: lat, Y: lng}
 		data = append(data, pair)
 	}
 	//step 2: calculate approximate costs C(Pi, Bi)

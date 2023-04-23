@@ -72,9 +72,15 @@ func main() {
 			}
 		}
 
+		clusterMemberes := make(map[int][]Node, len(coreunion))
+		for k, v := range clusterNums {
+			clusterMemberes[v] = append(clusterMemberes[v], k)
+		}
+		// TODO List of members of cluster
 		// send RPCs to clients with their cluster rep ip
 		for node, clusterNum := range clusterNums {
-			clusterinfo := ClusterInfo{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum}
+			clusterinfo := ClientClusterJoinRequest{NodeItself: node, ClusterRep: coreunion[node], ClusterNum: clusterNum,
+				Members: clusterMemberes[clusterNum]}
 			go sendClusterInfo(node, clusterinfo)
 		}
 	}
@@ -92,6 +98,7 @@ func acceptConnections() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
+	defer conn.Close()
 	rpc.Accept(conn)
 }
 
@@ -112,6 +119,7 @@ func sendClusteringRPC(request JoinRequest) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	clusterResponse := new(MainClustererClusteringNodeResponse)
@@ -129,6 +137,7 @@ func sendStartClusteringRPC(clusterIp string) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 
 	client := rpc.NewClient(conn)
 	// var clusterResponse *MainClustererClusteringNodeResponse
@@ -173,19 +182,20 @@ func coresetUnion() map[Node]int {
 }
 
 // send cluster info to client nodes
-func sendClusterInfo(node Node, clusterinfo ClusterInfo) {
+func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
 	fmt.Println("Send cluster info to: ", node.Ip)
 	conn, err := net.Dial("tcp", node.Ip)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
+	defer conn.Close()
 	client := rpc.NewClient(conn)
-	response := new(ClientMainClustererResponse)
-	fmt.Println("Node ", string(clusterinfo.NodeItself.Uuid[:]), "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", string(clusterinfo.ClusterRep.Uuid[:]))
+	response := new(ClientClusterJoinResponse)
+	fmt.Println("Node ", clusterinfo.NodeItself.Uuid.String(), "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", clusterinfo.ClusterRep.Uuid.String())
 
-	err = client.Call("ClientRPC.RecvClusterInfo", clusterinfo, &response)
+	err = client.Call("ClientRPC.JoinCluster", clusterinfo, &response)
 	if err != nil {
-		os.Stderr.WriteString("IntroducerRPC.ClientJoin error: " + err.Error())
+		os.Stderr.WriteString("ClientRPC.ClientJoin error: " + err.Error())
 	}
 }
