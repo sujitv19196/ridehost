@@ -392,12 +392,11 @@ func distanceBetweenCoords(lat1 float64, lng1 float64, lat2 float64, lng2 float6
 
 func sendBidRPC(node types.Node, cost float64) types.BidResponse {
 	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(Ports["clientRPC"]), constants.BidTimeout)
-	defer conn.Close()
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return BidResponse{Response: false}
 	}
-
+	defer conn.Close()
 	client := rpc.NewClient(conn)
 	response := new(types.BidResponse)
 
@@ -410,12 +409,11 @@ func sendBidRPC(node types.Node, cost float64) types.BidResponse {
 
 func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
 	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(Ports["clientRPC"]), constants.BidTimeout)
-	defer conn.Close()
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return RiderInfo{Response: false}
 	}
-
+	defer conn.Close()
 	client := rpc.NewClient(conn)
 	response := new(RiderInfo)
 	err = client.Call("ClientRPC.RecvDriverInfo", driverInfo, &response)
