@@ -79,9 +79,9 @@ func startFailureDetector() {
 
 func forwardRequestToClusterer(request JoinRequest) {
 	mu.Lock()
-	clustererList := virtRing.GetList()
+	clustererList := virtRing.GetNodes(false)
 	curClusteringNode = curClusteringNode % len(clustererList)
-	clustererIP := clustererList[curClusteringNode]
+	clustererIP := clustererList[curClusteringNode].Ip
 	curClusteringNode = (curClusteringNode + 1) % len(clustererList)
 	mu.Unlock()
 	conn, err := net.Dial("tcp", clustererIP+strconv.Itoa(constants.Ports["clusteringNode"]))

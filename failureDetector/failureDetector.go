@@ -152,7 +152,7 @@ func (fdr *FailureDetectorRPC) SendNodeFailure(request types.ClusterNodeRemovalR
 func RemoveNode(nodeIP string, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, introducerIP string) {
 	mu.Lock()
 	// get list before removing node so failed node gets rpc saying it failed
-	IPs := virtRing.GetList()
+	IPs := virtRing.GetIPList()
 	virtRing.RemoveNode(nodeIP)
 	mu.Unlock()
 	if len(introducerIP) > 0 {

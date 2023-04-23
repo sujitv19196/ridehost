@@ -137,13 +137,14 @@ func (L *UniqueCLL) GetNeighbors(key string) []string {
 	return machine_ids
 }
 
-func (L *UniqueCLL) GetList() []string {
+// returns list of node IPs for each node in the ring
+func (L *UniqueCLL) GetIPList() []string {
 	// L.mu.Lock()
 	// defer L.mu.Unlock()
 	var machine_ids []string
 	curr_node := L.head
 	for i := 0; i < L.size; i++ {
-		machine_ids = append(machine_ids, curr_node.key)
+		machine_ids = append(machine_ids, curr_node.nodeinfo.Ip)
 		curr_node = curr_node.next
 	}
 	return machine_ids
@@ -167,8 +168,8 @@ func (L *UniqueCLL) GetNodes(onlyRiders bool) []types.Node {
 }
 
 func (L *UniqueCLL) PrintList() {
-	machine_names := L.GetList()
+	machine_names := L.GetNodes(false)
 	for i := 0; i < len(machine_names); i++ {
-		fmt.Println(machine_names[i])
+		fmt.Println(machine_names[i].Uuid.String())
 	}
 }
