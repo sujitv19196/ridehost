@@ -47,11 +47,16 @@ var nodeItself types.Node
 var riderAuctionState RiderAuctionState
 
 func main() {
-	if len(os.Args) != 5 {
-		fmt.Println("format: ./client nodeType introducerIp lat lng")
-		os.Exit(1)
+	if len(os.Args) >= 3 {
+		nodeType, _ := strconv.Atoi(os.Args[2])
+		if nodeType == Driver && (len(os.Args) < 5) {
+			fmt.Println("format for Driver: ./client nodeType introducerIp startlat startlng")
+			os.Exit(1)
+		} else if nodeType == Rider && (len(os.Args) < 7) {
+			fmt.Println("format for Driver: ./client nodeType introducerIp startlat startlng destlat destlng")
+			os.Exit(1)
+		}
 	}
-
 	// get this machine's IP address
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -68,10 +73,16 @@ func main() {
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
 
-	lat, _ := strconv.ParseFloat(os.Args[3], 64)
-	lng, _ := strconv.ParseFloat(os.Args[4], 64)
-
-	req := JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: lat, StartLng: lng}, IntroducerIp: os.Args[2]}
+	startLat, _ := strconv.ParseFloat(os.Args[3], 64)
+	startLng, _ := strconv.ParseFloat(os.Args[4], 64)
+	req := JoinRequest{}
+	if nodeType == Rider {
+		destLat, _ := strconv.ParseFloat(os.Args[5], 64)
+		destLng, _ := strconv.ParseFloat(os.Args[6], 64)
+		req = JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng, DestLat: destLat, DestLng: destLng}, IntroducerIp: os.Args[2]}
+	} else {
+		req = JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng}, IntroducerIp: os.Args[2]}
+	}
 	r := joinSystem(req)
 	fmt.Println("From Introducer: ", r.Message)
 
@@ -83,6 +94,7 @@ func main() {
 	go sendPings()
 	go acceptPings()
 
+	riderAuctionState = RiderAuctionState{mu: sync.Mutex{}, acceptedBid: false}
 	acceptClusteringConnections()
 }
 
@@ -340,7 +352,9 @@ func sendBid() {
 	// loop thrugh list and send bid to each client
 	for _, rider := range biddingPool {
 		riderCost := riderCost(nodeItself, rider)
+		log.Println("Send bid to ", rider.Uuid.String(), " value: ", fmt.Sprintf("%f", riderCost))
 		bidResponse := sendBidRPC(rider, riderCost)
+		log.Println("Bid Reponse: ", bidResponse)
 		if bidResponse.Response && bidResponse.Accept {
 			// driver either accepts or declines rider
 			// assume driver auto accept
@@ -369,7 +383,7 @@ func driverCost(driver types.Node, rider types.Node) float64 {
 
 // rider cost is from their start to end dest + extra distance that the driver had to drive to pick them up
 func riderCost(driver types.Node, rider types.Node) float64 {
-	return driverCost(driver, rider) + distanceBetweenCoords(rider.StartLat, rider.StartLng, rider.DestLat, rider.DestLng)
+	return distanceBetweenCoords(rider.StartLat, rider.StartLng, rider.DestLat, rider.DestLng)
 }
 
 func distanceBetweenCoords(lat1 float64, lng1 float64, lat2 float64, lng2 float64) float64 {
