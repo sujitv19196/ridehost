@@ -330,7 +330,7 @@ func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) error {
 	return nil
 }
 
-func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response types.RiderInfo) error {
+func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response *types.RiderInfo) error {
 	fmt.Println(driverInfo.PhoneNumber)
 	response.Response = true
 	response.PhoneNumber = "phone number recvd!"
