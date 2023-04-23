@@ -301,13 +301,13 @@ func sendListRemoval(neighborIp string, IPs []string) {
 // }
 
 // rider receiving a bid
-func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) {
+func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) error {
 	riderAuctionState.mu.Lock()
 	defer riderAuctionState.mu.Unlock()
 	response.Response = true
 	if riderAuctionState.acceptedBid { // if the rider already accepted a bid
 		response.Accept = false
-		return
+		return nil
 	}
 
 	if bid.Cost < RiderMaxCost { // if bid is within ddrivere price range
@@ -315,12 +315,14 @@ func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) {
 	} else {
 		response.Accept = false
 	}
+	return nil
 }
 
-func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response types.RiderInfo) {
+func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response types.RiderInfo) error {
 	fmt.Println(driverInfo.PhoneNumber)
 	response.Response = true
 	response.PhoneNumber = "phone number recvd!"
+	return nil
 }
 
 // driver sending a bid to a rider
