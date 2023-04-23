@@ -40,9 +40,12 @@ def run_executable(executable_path, coords):
         for i in range(len(coords)):
             nodeType = random.randint(0, 1)
             pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
+            # pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["0.0.0.0"] + [str(coords[i][0])] + [str(coords[i][1])] + [str(i)]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
         pool.close()
         pool.join()
-    f.close()   
+    f.close() 
 
-coords = generate_random_points(10, -90, 90, -180, 180)
-run_executable("client/client", coords)
+
+if __name__ == '__main__':  
+    coords = generate_random_points(8, -90, 90, -180, 180)
+    run_executable("client/client", coords)

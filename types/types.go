@@ -46,6 +46,7 @@ type Point struct {
 
 type Coreset struct {
 	Coreset      []Point //TODO change, placeholder
+	Weights      []float64
 	CoresetNodes []Node
 	Tempcluster  map[Node][]Node
 }
@@ -59,6 +60,17 @@ type ClusterResult struct {
 }
 
 type ClientMainClustererResponse struct {
+	Message string
+	Error   error
+}
+
+type CostMsg struct {
+	NodeIp   string
+	Cost     float64
+	LengthML int
+}
+
+type ClusteringNodeClusteringNodeResponse struct {
 	Message string
 	Error   error
 }
