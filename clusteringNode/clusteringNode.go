@@ -279,7 +279,7 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	mpProb := []float64{}
 
 	for i := 0; i < len(costList); i++ {
-		mpProb = append(mpProb, costList[i]/cost)
+		mpProb = append(mpProb, (costList[i]+1e-31)/cost)
 	}
 
 	// Round 2 step 3: Non-uniform random sample 𝑆𝑖 of 𝑡𝑖 points from Pi, where for every 𝑞 ∈ 𝑃𝑖.

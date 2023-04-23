@@ -48,7 +48,7 @@ func main() {
 
 	for { // send request to start clustering to all nodes every ClusteringPeriod
 		time.Sleep(ClusteringPeriod * time.Minute) // TODO might want a cond var here
-
+		start := time.Now()
 		for _, node := range clusteringNodes {
 			sendStartClusteringRPC(node)
 		}
@@ -60,6 +60,8 @@ func main() {
 		}
 		// take union of coresets
 		clusterNums := coresetUnion()
+		end := time.Now()
+		fmt.Println("execution time of kmeans: ", end.Sub(start))
 		// make cope list and then clear list
 		tempcorelist := coresetList.List
 		coresetList.List = nil
