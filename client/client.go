@@ -147,7 +147,7 @@ func startFailureDetector() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	go failureDetector.SendPings(&mu, &joined, &startPinging, virtRing, myIPStr)
+	go failureDetector.SendPings(&mu, &joined, &startPinging, virtRing, myIPStr, "")
 	go failureDetector.AcceptPings(myIP, &mu, &joined)
 	rpc.Accept(conn)
 }

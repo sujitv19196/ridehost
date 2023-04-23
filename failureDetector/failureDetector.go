@@ -34,7 +34,7 @@ func (fdr *FailureDetectorRPC) StartPings(request types.ClientClusterPingingStat
 	return nil
 }
 
-func SendPings(mu *sync.Mutex, joined *bool, startPinging *bool, virtRing *cll.UniqueCLL, myIPStr string) {
+func SendPings(mu *sync.Mutex, joined *bool, startPinging *bool, virtRing *cll.UniqueCLL, myIPStr string, introducerIP string) {
 	for {
 		neighborIPs := []string{}
 		mu.Lock()
@@ -45,7 +45,7 @@ func SendPings(mu *sync.Mutex, joined *bool, startPinging *bool, virtRing *cll.U
 		var wg sync.WaitGroup
 		wg.Add(len(neighborIPs))
 		for _, neighborIP := range neighborIPs {
-			go AttemptPings(neighborIP, &wg, mu, virtRing, myIPStr)
+			go AttemptPings(neighborIP, &wg, mu, virtRing, myIPStr, introducerIP)
 		}
 		wg.Wait()
 		// ping every second
@@ -53,7 +53,7 @@ func SendPings(mu *sync.Mutex, joined *bool, startPinging *bool, virtRing *cll.U
 	}
 }
 
-func AttemptPings(neighborIP string, wg *sync.WaitGroup, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string) {
+func AttemptPings(neighborIP string, wg *sync.WaitGroup, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, introducerIP string) {
 	defer wg.Done()
 	if !sendPing(neighborIP) {
 		for i := 0; i < 2; i++ {
@@ -62,7 +62,7 @@ func AttemptPings(neighborIP string, wg *sync.WaitGroup, mu *sync.Mutex, virtRin
 				return
 			}
 		}
-		RemoveNode(neighborIP, mu, virtRing, myIPStr)
+		RemoveNode(neighborIP, mu, virtRing, myIPStr, introducerIP)
 	}
 }
 
@@ -149,12 +149,15 @@ func (fdr *FailureDetectorRPC) SendNodeFailure(request types.ClusterNodeRemovalR
 	return nil
 }
 
-func RemoveNode(nodeIP string, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string) {
+func RemoveNode(nodeIP string, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, introducerIP string) {
 	mu.Lock()
 	// get list before removing node so failed node gets rpc saying it failed
 	IPs := virtRing.GetList()
 	virtRing.RemoveNode(nodeIP)
 	mu.Unlock()
+	if len(introducerIP) > 0 {
+		IPs = append(IPs, introducerIP)
+	}
 	go sendListRemoval(nodeIP, IPs, myIPStr)
 	log.Printf("removed node %s\n", nodeIP)
 }
