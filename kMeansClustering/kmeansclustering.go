@@ -14,8 +14,8 @@ import (
 func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	data := []Point{}
 	for i := 0; i < len(Nodelist); i++ {
-		lat := Nodelist[i].Lat
-		lng := Nodelist[i].Lng
+		lat := Nodelist[i].StartLat
+		lng := Nodelist[i].StartLng
 		pair := Point{X: lat, Y: lng}
 		data = append(data, pair)
 	}
@@ -221,8 +221,8 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 // 	}
 // 	core.Coreset = coreset
 // 	return core
-
 // }
+
 func intersect(slice1, slice2 []int) []int {
 	var intersect []int
 	for _, element1 := range slice1 {

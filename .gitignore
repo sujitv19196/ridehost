@@ -1,5 +1,8 @@
 client/client
+cll/cll
+constants/constants
 introducer/introducer
-mainclusterer/mainclusterer
-clusteringnode/clusteringnode
+mainClusterer/mainClusterer
+test_client/test_client
+clusteringNode/clusteringNode
 output.log
