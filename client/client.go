@@ -84,7 +84,7 @@ func main() {
 		req = JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng}, IntroducerIp: os.Args[2]}
 	}
 	r := joinSystem(req)
-	fmt.Println("From Introducer: ", r.Message)
+	log.Println("From Introducer: ", r.Message)
 
 	mu = sync.Mutex{}
 	mu.Lock()
@@ -131,6 +131,7 @@ func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *Clie
 		virtRing.PushBack(member)
 		fmt.Print(member.Uuid.String() + ", ")
 	}
+	fmt.Println()
 	joined = true
 	log.Println("Joined Cluster #", clusterNum)
 	response.Ack = true
@@ -319,21 +320,25 @@ func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) error {
 	response.Response = true
 	if riderAuctionState.acceptedBid { // if the rider already accepted a bid
 		response.Accept = false
+		log.Println("Bid Rejected, already accepted bid")
 		return nil
 	}
 
 	if bid.Cost < RiderMaxCost { // if bid is within ddrivere price range
 		response.Accept = true
+		log.Println("Bid Accepted, cost: ", bid.Cost)
 	} else {
 		response.Accept = false
+		log.Println("Bid Rejected, cost: ", bid.Cost)
 	}
 	return nil
 }
 
 func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response *types.RiderInfo) error {
-	fmt.Println(driverInfo.PhoneNumber)
+	log.Println("Driver Info Recv'd: ", driverInfo.PhoneNumber)
 	response.Response = true
-	response.PhoneNumber = "phone number recvd!"
+	response.PhoneNumber = "RiderPhoneNumber"
+	defer os.Exit(0)
 	return nil
 }
 
@@ -361,7 +366,7 @@ func sendBid() {
 			driverInfo := types.DriverInfo{PhoneNumber: "drivernumber"}
 			riderInfo := sendDriveInfo(rider, driverInfo)
 			if riderInfo.Response { // matched, exit system on match
-				fmt.Println("Matched! Rider number: ", riderInfo.PhoneNumber)
+				log.Println("Matched! Rider number: ", riderInfo.PhoneNumber)
 				os.Exit(0)
 			}
 		} // if no response, try next rider in biddingPool
