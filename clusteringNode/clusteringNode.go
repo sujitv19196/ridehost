@@ -86,7 +86,7 @@ func (c *ClusteringNodeRPC) Cluster(request JoinRequest, response *MainClusterer
 func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererClusteringNodeResponse) error {
 	fmt.Println("Membership List: ", len(ML.List))
 	for _, elem := range ML.List {
-    fmt.Print(elem.Uuid.String())
+		fmt.Print(elem.Uuid.String())
 	}
 	go func() {
 		coreset := Coreset{}
@@ -198,8 +198,8 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	centroids := clusterresults.Centroids
 	data := []Point{}
 	for i := 0; i < len(Nodelist); i++ {
-		lat := Nodelist[i].Lat
-		lng := Nodelist[i].Lng
+		lat := Nodelist[i].StartLat
+		lng := Nodelist[i].StartLng
 		pair := Point{X: lat, Y: lng}
 		data = append(data, pair)
 	}

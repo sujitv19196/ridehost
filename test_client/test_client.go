@@ -30,7 +30,7 @@ func main() {
 		response := new(types.ClientClusterJoinResponse)
 		joinResponses = append(joinResponses, response)
 		request := types.ClientClusterJoinRequest{}
-		request.ClusterRepIP = clusterRep
+		request.ClusterRep.Ip = clusterRep
 		request.ClusterNum = 0
 		request.Members = clients
 		joinPromises = append(joinPromises, client.Go("ClientRPC.JoinCluster", request, response, nil))
