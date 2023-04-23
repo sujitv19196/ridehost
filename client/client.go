@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"math"
@@ -11,13 +10,12 @@ import (
 	"ridehost/cll"
 	"ridehost/constants"
 	. "ridehost/constants"
+	"ridehost/failureDetector"
 	"ridehost/types"
 	. "ridehost/types"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -91,10 +89,9 @@ func main() {
 	joined = false
 	startPinging = false
 	mu.Unlock()
-	go sendPings()
-	go acceptPings()
 
 	riderAuctionState = RiderAuctionState{mu: sync.Mutex{}, acceptedBid: false}
+	go startFailureDetector()
 	acceptClusteringConnections()
 }
 
@@ -140,178 +137,6 @@ func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *Clie
 	}
 	return nil
 }
-
-func (c *ClientRPC) StartPinging(request types.ClientClusterPingingStatusRequest, response *types.ClientClusterPingingStatusResponse) error {
-	mu.Lock()
-	defer mu.Unlock()
-	startPinging = request.Status
-	log.Printf("pinging status changed to %t\n", startPinging)
-	response.Ack = true
-	return nil
-}
-
-func sendPings() {
-	for {
-		neighborIPs := []string{}
-		mu.Lock()
-		if joined && startPinging {
-			neighborIPs = virtRing.GetNeighbors(myIPStr)
-		}
-		mu.Unlock()
-		var wg sync.WaitGroup
-		wg.Add(len(neighborIPs))
-		for _, neighborIP := range neighborIPs {
-			go AttemptPings(neighborIP, &wg)
-		}
-		wg.Wait()
-		// ping every second
-		time.Sleep(constants.PingFrequency)
-	}
-}
-
-func AttemptPings(neighborIP string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	if !sendPing(neighborIP) {
-		for i := 0; i < 2; i++ {
-			time.Sleep(time.Duration(math.Pow(2, float64(i+1))) * time.Second)
-			if sendPing(neighborIP) {
-				return
-			}
-		}
-		RemoveNode(neighborIP)
-	}
-}
-
-func sendPing(neighborIP string) bool {
-	// send ping
-	buffer := make([]byte, 2048)
-	conn, err := net.Dial("udp", neighborIP+":"+strconv.Itoa(constants.Ports["acceptPings"]))
-	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
-		return false
-	}
-	defer conn.Close()
-	fmt.Fprintf(conn, "PING")
-	conn.SetReadDeadline(time.Now().Add(constants.UDPPingAckTimeout))
-	bytes_read, err := bufio.NewReader(conn).Read(buffer)
-	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
-		return false
-	}
-	// recieve response and check if it's an ack
-	// logger.Printf("[sendPing] Message from %s: \"%s\"\n", neighborIP, buffer[:bytes_read])
-	if strings.Compare(string(buffer[:bytes_read]), "ACK") != 0 {
-		// remove process ID from all membership lists if ack is not recieved
-		log.Printf("[sendPing] ACK not recieved from %s\n", neighborIP)
-		return false
-	}
-	return true
-}
-
-func acceptPings() {
-	// listen for ping
-	buffer := make([]byte, 2048)
-	addr := net.UDPAddr{
-		Port: constants.Ports["acceptPings"],
-		IP:   myIP,
-	}
-	conn, err := net.ListenUDP("udp", &addr)
-	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
-	}
-	defer conn.Close()
-	for {
-		bytes_read, addr, err := conn.ReadFromUDP(buffer)
-		if err != nil {
-			os.Stderr.WriteString(err.Error() + "\n")
-			continue
-		}
-		// recieve message and check if it's a ping
-		// logger.Printf("[acceptPings] Message from %v: \"%s\"\n", addr, buffer[:bytes_read])
-		if strings.Compare(string(buffer[:bytes_read]), "PING") != 0 {
-			log.Printf("[acceptPings] PING not recieved from %v\n", addr)
-			continue
-		}
-		go func(conn *net.UDPConn, addr *net.UDPAddr, joined bool) {
-			var err error
-			if joined {
-				// if it's a ping, send an ack
-				_, err = conn.WriteToUDP([]byte("ACK"), addr)
-			}
-
-			if err != nil {
-				os.Stderr.WriteString(err.Error() + "\n")
-			}
-		}(conn, addr, func() bool {
-			mu.Lock()
-			defer mu.Unlock()
-			return joined
-		}())
-	}
-}
-
-func (c *ClientRPC) SendNodeFailure(request types.ClusterNodeRemovalRequest, response *types.ClusterNodeRemovalResponse) error {
-	mu.Lock()
-	defer mu.Unlock()
-	virtRing.RemoveNode(request.NodeIP)
-	log.Printf("removing node %s\n", request.NodeIP)
-	// removing self
-	if request.NodeIP == myIPStr {
-		joined = false
-		log.Println("left cluster")
-	}
-	response.Ack = true
-	return nil
-}
-
-func RemoveNode(nodeIP string) {
-	mu.Lock()
-	// get list before removing node so failed node gets rpc saying it failed
-	IPs := virtRing.GetList()
-	virtRing.RemoveNode(nodeIP)
-	mu.Unlock()
-	go sendListRemoval(nodeIP, IPs)
-	log.Printf("removed node %s\n", nodeIP)
-}
-
-func sendListRemoval(neighborIp string, IPs []string) {
-	for _, ip := range IPs {
-		if ip != myIPStr {
-			go func(ip string, neighborIp string) {
-				conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.TCPTimeout)
-				// only throw error when can't connect to non-failed node
-				if err != nil {
-					if ip == neighborIp {
-						return
-					}
-					os.Stderr.WriteString(err.Error() + "\n")
-					os.Exit(1)
-				}
-
-				client := rpc.NewClient(conn)
-				response := new(types.ClusterNodeRemovalResponse)
-				request := types.ClusterNodeRemovalRequest{}
-				request.NodeIP = neighborIp
-				err = client.Call("ClientRPC.SendNodeFailure", request, response)
-				if err != nil {
-					log.Fatal("SendNodeFailure error: ", err)
-				}
-				conn.Close()
-			}(ip, neighborIp)
-		}
-	}
-}
-
-// func (c *ClientRPC) RecvClusterInfo(clusterInfo types.ClusterInfo, response *types.ClientMainClustererResponse) error {
-// 	mu.Lock()
-// 	nodeItself = clusterInfo.NodeItself
-// 	clusterRep := clusterInfo.ClusterRep
-// 	clusterNum = clusterInfo.ClusterNum
-// 	fmt.Println("this client got clusterRep and clusterNum assigned as : ", nodeItself, clusterRep, clusterNum)
-// 	mu.Unlock()
-// 	return nil
-// }
 
 // rider receiving a bid
 func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) error {
@@ -444,6 +269,27 @@ func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
 		log.Fatal("ClientRPC.RecvDriverInfo error: ", err)
 	}
 	return *response
+}
+
+func startFailureDetector() {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
+	failureDetectorRPC.Mu = &mu
+	failureDetectorRPC.NodeItself = &nodeItself
+	failureDetectorRPC.VirtRing = virtRing
+	failureDetectorRPC.Joined = &joined
+	failureDetectorRPC.StartPinging = &startPinging
+	rpc.Register(failureDetectorRPC)
+	conn, err := net.ListenTCP("tcp", address)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	go failureDetector.SendPings(&mu, &joined, &startPinging, virtRing, myIPStr, "")
+	go failureDetector.AcceptPings(myIP, &mu, &joined)
+	rpc.Accept(conn)
 }
 
 func acceptClusteringConnections() {
