@@ -36,7 +36,8 @@ func (c *CoresetList) Clear() {
 	c.mu.Unlock()
 }
 
-var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
+// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
+var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
 
 // var clusteringNodes = []string{"0.0.0.0:2235", "0.0.0.0:2238", "0.0.0.0:2239"}
 
