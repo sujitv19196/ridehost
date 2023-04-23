@@ -338,7 +338,7 @@ func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response *types.
 	log.Println("Driver Info Recv'd: ", driverInfo.PhoneNumber)
 	response.Response = true
 	response.PhoneNumber = "RiderPhoneNumber"
-	defer os.Exit(0)
+	// TODO graceful leave system
 	return nil
 }
 
@@ -367,11 +367,13 @@ func sendBid() {
 			riderInfo := sendDriveInfo(rider, driverInfo)
 			if riderInfo.Response { // matched, exit system on match
 				log.Println("Matched! Rider number: ", riderInfo.PhoneNumber)
+				// TODO graceful leave system
 				os.Exit(0)
 			}
-		} // if no response, try next rider in biddingPool
+		} // if no response or declined bid, try next rider in biddingPool
 	}
 	// terminate if no match
+	// TODO graceful leave system
 	os.Exit(0)
 }
 
