@@ -48,7 +48,7 @@ var riderAuctionState RiderAuctionState
 
 func main() {
 	if len(os.Args) >= 3 {
-		nodeType, _ := strconv.Atoi(os.Args[2])
+		nodeType, _ := strconv.Atoi(os.Args[1])
 		if nodeType == Driver && (len(os.Args) < 5) {
 			fmt.Println("format for Driver: ./client nodeType introducerIp startlat startlng")
 			os.Exit(1)
