@@ -101,7 +101,7 @@ func main() {
 // command called by a client to join the system
 func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	// request to introducer
-	conn, err := net.Dial("tcp", request.IntroducerIp+":"+strconv.Itoa(Ports["introducer"]))
+	conn, err := net.Dial("tcp", request.IntroducerIp+":"+strconv.Itoa(constants.Ports["introducer"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
@@ -460,24 +460,6 @@ func acceptClusteringConnections() {
 	defer conn.Close()
 	rpc.Accept(conn)
 }
-
-// func getMyIp() string {
-// 	ief, err := net.InterfaceByName("eth0")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	addrs, err := ief.Addrs()
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	tcpAddr := &net.TCPAddr{
-// 		IP: addrs[0].(*net.IPNet).IP,
-// 	}
-// 	ipstr := strings.TrimSuffix(tcpAddr.String(), ":0") + ":" + strconv.Itoa(Ports["clientRPC"])
-// 	fmt.Println(ipstr)
-// 	return ipstr
-// }
 
 // client requests introduicer
 // client gets back cluster number and cluster represnteitnve
