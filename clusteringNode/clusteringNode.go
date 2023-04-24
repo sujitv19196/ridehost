@@ -72,9 +72,9 @@ func tellIntroducerReady() {
 
 	client := rpc.NewClient(conn)
 	response := new(types.ClientIntroducerResponse)
-	err = client.Call("IntroducerRPC.ClientReady", ClientReadyRequest{RequestingNode: nodeItself}, &response)
+	err = client.Call("IntroducerRPC.CNReady", ClientReadyRequest{RequestingNode: nodeItself}, &response)
 	if err != nil {
-		log.Fatal("IntroducerRPC.ClientReady error: ", err)
+		log.Fatal("IntroducerRPC.CNReady error: ", err)
 	}
 }
 

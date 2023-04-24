@@ -57,7 +57,7 @@ func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroduc
 	return nil
 }
 
-func (i *IntroducerRPC) ClientReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
+func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
 	// take the requests of the cliient and imediately send to mainClusterer
 	if request.RequestingNode.NodeType == Driver {
 		mu.Lock()
