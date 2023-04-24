@@ -67,6 +67,7 @@ func startFailureDetector() {
 	// TEMP HARD CODED VALUES
 	virtRing.PushBack(Node{Ip: "172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])})
 	virtRing.PushBack(Node{Ip: "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"])})
+	virtRing.PushBack(Node{Ip: "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])})
 	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
 	failureDetectorRPC.Mu = &mu
 	failureDetectorRPC.VirtRing = virtRing
