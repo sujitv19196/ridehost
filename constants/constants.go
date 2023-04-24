@@ -19,3 +19,5 @@ const TCPTimeout = time.Minute / 12
 const BidTimeout = time.Second * 5 // 5 seconds
 
 const RiderMaxCost float64 = 100 //km
+
+const DivisorT = 1.2 //used by clustering node to find T
