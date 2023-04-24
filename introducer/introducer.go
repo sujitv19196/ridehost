@@ -88,7 +88,7 @@ func forwardRequestToClusterer(request JoinRequest) {
 	clustererIP := clustererList[curClusteringNode].Ip
 	curClusteringNode = (curClusteringNode + 1) % len(clustererList)
 	mu.Unlock()
-	conn, err := net.Dial("tcp", clustererIP+strconv.Itoa(constants.Ports["clusteringNode"]))
+	conn, err := net.Dial("tcp", clustererIP)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
