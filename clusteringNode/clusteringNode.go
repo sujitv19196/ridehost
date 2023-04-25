@@ -6,8 +6,10 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"ridehost/constants"
 	. "ridehost/constants"
 	. "ridehost/kMeansClustering"
+	"ridehost/types"
 	. "ridehost/types"
 	"strconv"
 	"sync"
@@ -39,6 +41,8 @@ var ML MembershipList
 // VM 2
 var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 // var mainClustererIp = "0.0.0.0:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
+var introducerIp string // TODO FILL!!!!!!!!!!!
+var nodeItself Node     // TODO initialize!!!!!
 
 type ClusteringNodeRPC bool
 
@@ -58,6 +62,22 @@ func main() {
 	acceptConnections()
 }
 
+func tellIntroducerReady() {
+	conn, err := net.Dial("tcp", introducerIp+":"+strconv.Itoa(constants.Ports["introducer"]))
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+	defer conn.Close()
+
+	client := rpc.NewClient(conn)
+	response := new(types.ClientIntroducerResponse)
+	err = client.Call("IntroducerRPC.CNReady", ClientReadyRequest{RequestingNode: nodeItself}, &response)
+	if err != nil {
+		log.Fatal("IntroducerRPC.CNReady error: ", err)
+	}
+}
+
 func acceptConnections() {
 	// get this machine's IP address
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["clusteringNode"]))
@@ -71,6 +91,7 @@ func acceptConnections() {
 		log.Fatal("listen error:", err)
 	}
 	defer conn.Close()
+	tellIntroducerReady()
 	rpc.Accept(conn)
 }
 

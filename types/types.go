@@ -29,6 +29,15 @@ type ClientIntroducerResponse struct {
 	Error   error
 }
 
+type AckErrResponse struct {
+	Message string
+	Error   error
+}
+
+type ClientReadyRequest struct {
+	RequestingNode Node
+}
+
 type IntroducerMainClustererResponse struct {
 	Message string
 	Error   error
