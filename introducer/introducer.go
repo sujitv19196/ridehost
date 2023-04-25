@@ -43,7 +43,7 @@ func main() {
 
 	curClusteringNode = 0
 
-	go startFailureDetector()
+	startFailureDetector()
 
 	rpc.Accept(conn)
 }
@@ -62,6 +62,38 @@ func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroduc
 		response.VirtualRing = virtRing // TODO deap copy?
 	}
 	mu.Unlock()
+	return nil
+}
+
+func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
+	// take the requests of the cliient and imediately send to mainClusterer
+	if request.RequestingNode.NodeType == Driver {
+		mu.Lock()
+		virtRing.PushBack(request.RequestingNode)
+		mu.Unlock()
+	}
+	response.Message = "ACK"
+	response.IsClusteringNode = false
+	// TODO add error?
+	mu.Lock()
+	if virtRing.GetSize() < MaxCNs && request.NodeRequest.NodeType == Driver {
+		// virtRing.PushBack(request.NodeRequest)
+		response.IsClusteringNode = true
+		response.VirtualRing = virtRing // TODO deap copy?
+	}
+	mu.Unlock()
+	return nil
+}
+
+func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
+	// take the requests of the cliient and imediately send to mainClusterer
+	if request.RequestingNode.NodeType == Driver {
+		mu.Lock()
+		virtRing.PushBack(request.RequestingNode)
+		mu.Unlock()
+	}
+	response.Message = "ACK"
+	// TODO add error?
 	return nil
 }
 
@@ -86,7 +118,7 @@ func startFailureDetector() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	rpc.Accept(conn)
+	go rpc.Accept(conn)
 }
 
 func forwardRequestToClusterer(request JoinRequest) {

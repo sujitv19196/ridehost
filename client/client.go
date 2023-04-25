@@ -42,6 +42,7 @@ var startPinging bool
 var clusterRepIP string
 var clusterNum int
 var nodeItself types.Node
+var introducerIp string
 
 var riderAuctionState RiderAuctionState
 
@@ -63,6 +64,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	introducerIp = os.Args[2]
+
 	myIP = conn.LocalAddr().(*net.UDPAddr).IP
 	myIPStr = myIP.String()
 	conn.Close()
@@ -79,10 +82,10 @@ func main() {
 		destLat, _ := strconv.ParseFloat(os.Args[5], 64)
 		destLng, _ := strconv.ParseFloat(os.Args[6], 64)
 		nodeItself = Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng, DestLat: destLat, DestLng: destLng}
-		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: os.Args[2]}
+		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: introducerIp}
 	} else {
 		nodeItself = Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng}
-		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: os.Args[2]}
+		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: introducerIp}
 	}
 	r := joinSystem(req)
 	log.Println("From Introducer: ", r.Message)
@@ -94,7 +97,7 @@ func main() {
 	mu.Unlock()
 
 	riderAuctionState = RiderAuctionState{mu: sync.Mutex{}, acceptedBid: false}
-	go startFailureDetector()
+	startFailureDetector()
 	acceptClusteringConnections()
 }
 
@@ -115,7 +118,7 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
 	}
 	if response.IsClusteringNode {
-
+		// send Introducer Ready req
 		log.Println("Assigned as CN")
 		vr := response.VirtualRing
 		vr.PushBack(nodeItself)
@@ -296,7 +299,7 @@ func startFailureDetector() {
 	}
 	go failureDetector.SendPings(&mu, &joined, &startPinging, virtRing, myIPStr, "")
 	go failureDetector.AcceptPings(myIP, &mu, &joined)
-	rpc.Accept(conn)
+	go rpc.Accept(conn)
 }
 
 func acceptClusteringConnections() {

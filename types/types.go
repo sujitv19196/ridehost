@@ -35,6 +35,15 @@ type ClientIntroducerResponse struct {
 	VirtualRing      *cll.UniqueCLL
 }
 
+type AckErrResponse struct {
+	Message string
+	Error   error
+}
+
+type ClientReadyRequest struct {
+	RequestingNode Node
+}
+
 type IntroducerMainClustererResponse struct {
 	Message string
 	Error   error
