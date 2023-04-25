@@ -8,6 +8,7 @@ import (
 	"net/rpc"
 	"os"
 	"ridehost/cll"
+	"ridehost/clusteringNode"
 	"ridehost/constants"
 	. "ridehost/constants"
 	"ridehost/failureDetector"
@@ -77,9 +78,11 @@ func main() {
 	if nodeType == Rider {
 		destLat, _ := strconv.ParseFloat(os.Args[5], 64)
 		destLng, _ := strconv.ParseFloat(os.Args[6], 64)
-		req = JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng, DestLat: destLat, DestLng: destLng}, IntroducerIp: os.Args[2]}
+		nodeItself = Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng, DestLat: destLat, DestLng: destLng}
+		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: os.Args[2]}
 	} else {
-		req = JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng}, IntroducerIp: os.Args[2]}
+		nodeItself = Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng}
+		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: os.Args[2]}
 	}
 	r := joinSystem(req)
 	log.Println("From Introducer: ", r.Message)
@@ -111,13 +114,20 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	if err != nil {
 		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
 	}
+	if response.IsClusteringNode {
+
+		log.Println("Assigned as CN")
+		vr := response.VirtualRing
+		vr.PushBack(nodeItself)
+		go clusteringNode.Start(vr)
+	}
 	return *response
 }
 
 func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *ClientClusterJoinResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
-	nodeItself = request.NodeItself
+	// nodeItself = request.NodeItself
 	clusterNum = request.ClusterNum
 	clusterRepIP = request.ClusterRep.Ip
 	isRep = clusterRepIP == myIPStr
@@ -192,14 +202,11 @@ func sendBid() {
 			riderInfo := sendDriveInfo(rider, driverInfo)
 			if riderInfo.Response { // matched, exit system on match
 				log.Println("Matched! Rider number: ", riderInfo.PhoneNumber)
-				// TODO graceful leave system
-				os.Exit(0)
+				return
 			}
 		} // if no response or declined bid, try next rider in biddingPool
 	}
 	// terminate if no match
-	// TODO graceful leave system
-	os.Exit(0)
 }
 
 // cost functions and lat/lng distance calculations

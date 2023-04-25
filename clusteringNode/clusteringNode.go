@@ -1,4 +1,4 @@
-package main
+package clusteringNode
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"ridehost/cll"
 	. "ridehost/constants"
 	. "ridehost/kMeansClustering"
 	. "ridehost/types"
@@ -50,11 +51,13 @@ var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clustering
 // var clusteringNodes = []string{"0.0.0.0:2235", "0.0.0.0:2238", "0.0.0.0:2239"}
 
 var clusteringNodesResponseList ResponseList
+var virtualRing *cll.UniqueCLL
 
 // accepts connections from main clusterer
 // Cluster: takes cluster request and adds to membership list
 // StartClustering: performs coreset calculation on current membership list. Locks list until done and new requests are queeue'd.
-func main() {
+func Start(vr *cll.UniqueCLL) {
+	virtualRing = vr
 	acceptConnections()
 }
 

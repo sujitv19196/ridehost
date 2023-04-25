@@ -1,6 +1,10 @@
 package types
 
-import "github.com/google/uuid"
+import (
+	"ridehost/cll"
+
+	"github.com/google/uuid"
+)
 
 const (
 	Driver  int = 0
@@ -25,8 +29,10 @@ type JoinRequest struct {
 }
 
 type ClientIntroducerResponse struct {
-	Message string
-	Error   error
+	Message          string
+	Error            error
+	IsClusteringNode bool
+	VirtualRing      *cll.UniqueCLL
 }
 
 type IntroducerMainClustererResponse struct {

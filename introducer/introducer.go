@@ -53,7 +53,15 @@ func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroduc
 	// take the requests of the cliient and imediately send to mainClusterer
 	go forwardRequestToClusterer(request)
 	response.Message = "ACK"
+	response.IsClusteringNode = false
 	// TODO add error?
+	mu.Lock()
+	if virtRing.GetSize() < MaxCNs && request.NodeRequest.NodeType == Driver {
+		// virtRing.PushBack(request.NodeRequest)
+		response.IsClusteringNode = true
+		response.VirtualRing = virtRing // TODO deap copy?
+	}
+	mu.Unlock()
 	return nil
 }
 
@@ -62,7 +70,11 @@ func startFailureDetector() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
+
+	mu.Lock()
 	virtRing = &cll.UniqueCLL{}
+	virtRing.SetDefaults()
+	mu.Unlock()
 	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
 	failureDetectorRPC.Mu = &mu
 	failureDetectorRPC.VirtRing = virtRing
