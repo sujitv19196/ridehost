@@ -48,10 +48,10 @@ var nodeItself Node     // TODO initialize!!!!!
 type ClusteringNodeRPC bool
 
 // VM 3, 4, 5
-// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
-var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
+// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
 
-// var clusteringNodes = []string{"0.0.0.0:2235", "0.0.0.0:2238", "0.0.0.0:2239"}
+var mu = sync.Mutex{}
+var virtualRing = *&cll.UniqueCLL{}
 
 var clusteringNodesResponseList ResponseList
 var logger = log.New(os.Stdout, "ClusteringNode ", log.Ldate|log.Ltime)
@@ -59,11 +59,17 @@ var logger = log.New(os.Stdout, "ClusteringNode ", log.Ldate|log.Ltime)
 // accepts connections from main clusterer
 // Cluster: takes cluster request and adds to membership list
 // StartClustering: performs coreset calculation on current membership list. Locks list until done and new requests are queeue'd.
-func Start(vr *cll.UniqueCLL) {
-	virtualRing = vr
+func Start(membershipList []Node) {
+	mu.Lock()
+	virtualRing.SetDefaults()
+	for _, node := range membershipList {
+		virtualRing.PushBack(node)
+	}
+	mu.Unlock()
 	acceptConnections()
 }
 
+// sends RPC to introdcuer to indicate that it is ready to recv clustering requests
 func tellIntroducerReady() {
 	conn, err := net.Dial("tcp", introducerIp+":"+strconv.Itoa(constants.Ports["introducer"]))
 	if err != nil {
@@ -121,13 +127,16 @@ func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererCl
 			// clear list after clutsering
 			ML.List = nil
 		} else { // call send CostMsg so that other clustering nodes stop waiting
-			// add := []string{"0.0.0.0:2235"}
 			add, _ := net.LookupIP("ispycode.com")
-			for _, node := range clusteringNodes {
-				if node != add[0].String() {
-					go sendCostMsg(node, 0.0, 0)
+
+			mu.Lock()
+			for _, node := range virtualRing.GetNodes(false) {
+				nodeIP := node.Ip
+				if nodeIP != add[0].String() {
+					go sendCostMsg(nodeIP, 0.0, 0)
 				}
 			}
+			mu.Unlock()
 		}
 
 		ML.mu.Unlock()
@@ -249,17 +258,22 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	add, _ := net.LookupIP("ispycode.com")
 	// add := []string{"0.0.0.0:2235"}
 	currMLLen := len(ML.List)
-	for _, node := range clusteringNodes {
-		if node != add[0].String() {
-			go sendCostMsg(node, cost, currMLLen)
+	mu.Lock()
+	for _, node := range virtualRing.GetNodes(false) {
+		nodeIP := node.Ip
+		if nodeIP != add[0].String() {
+			go sendCostMsg(nodeIP, cost, currMLLen)
 		}
 	}
+	mu.Unlock()
 	clusteringNodesResponseList.cond = *sync.NewCond(&clusteringNodesResponseList.mu)
 	// wait for all responses to be recvd
 	clusteringNodesResponseList.mu.Lock()
-	for len(clusteringNodesResponseList.List) < len(clusteringNodes)-1 {
+	mu.Lock()
+	for len(clusteringNodesResponseList.List) < virtualRing.GetSize()-1 {
 		clusteringNodesResponseList.cond.Wait()
 	}
+	mu.Unlock()
 
 	// as a result from step 3
 	tempclusteringNodesResponseList := clusteringNodesResponseList.List

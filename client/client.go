@@ -11,7 +11,6 @@ import (
 	"ridehost/clusteringNode"
 	"ridehost/constants"
 	. "ridehost/constants"
-	"ridehost/failureDetector"
 	"ridehost/types"
 	. "ridehost/types"
 	"sort"
@@ -38,7 +37,6 @@ var mu sync.Mutex
 var isRep bool
 var virtRing *cll.UniqueCLL
 var joined bool
-var startPinging bool
 var clusterRepIP string
 var clusterNum int
 var nodeItself types.Node
@@ -93,11 +91,9 @@ func main() {
 	mu = sync.Mutex{}
 	mu.Lock()
 	joined = false
-	startPinging = false
 	mu.Unlock()
 
 	riderAuctionState = RiderAuctionState{mu: sync.Mutex{}, acceptedBid: false}
-	startFailureDetector()
 	acceptClusteringConnections()
 }
 
@@ -118,11 +114,8 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
 	}
 	if response.IsClusteringNode {
-		// send Introducer Ready req
-		log.Println("Assigned as CN")
-		vr := response.VirtualRing
-		vr.PushBack(nodeItself)
-		go clusteringNode.Start(vr)
+		log.Println("Assigned as CN, spinning up CN proc")
+		go clusteringNode.Start(response.Members)
 	}
 	return *response
 }
@@ -279,27 +272,6 @@ func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
 		log.Fatal("ClientRPC.RecvDriverInfo error: ", err)
 	}
 	return *response
-}
-
-func startFailureDetector() {
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
-	if err != nil {
-		log.Fatal("listen error:", err)
-	}
-	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
-	failureDetectorRPC.Mu = &mu
-	failureDetectorRPC.NodeItself = &nodeItself
-	failureDetectorRPC.VirtRing = virtRing
-	failureDetectorRPC.Joined = &joined
-	failureDetectorRPC.StartPinging = &startPinging
-	rpc.Register(failureDetectorRPC)
-	conn, err := net.ListenTCP("tcp", address)
-	if err != nil {
-		log.Fatal("listen error:", err)
-	}
-	go failureDetector.SendPings(&mu, &joined, &startPinging, virtRing, myIPStr, "")
-	go failureDetector.AcceptPings(myIP, &mu, &joined)
-	go rpc.Accept(conn)
 }
 
 func acceptClusteringConnections() {

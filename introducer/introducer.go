@@ -57,43 +57,21 @@ func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroduc
 	// TODO add error?
 	mu.Lock()
 	if virtRing.GetSize() < MaxCNs && request.NodeRequest.NodeType == Driver {
-		// virtRing.PushBack(request.NodeRequest)
 		response.IsClusteringNode = true
-		response.VirtualRing = virtRing // TODO deap copy?
+		response.Members = virtRing.GetNodes(false)
 	}
 	mu.Unlock()
 	return nil
 }
 
+// RPC that client calls to let Introducer know it is ready to recv clsutering requests
 func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
-	// take the requests of the cliient and imediately send to mainClusterer
-	if request.RequestingNode.NodeType == Driver {
-		mu.Lock()
-		virtRing.PushBack(request.RequestingNode)
-		mu.Unlock()
-	}
-	response.Message = "ACK"
-	response.IsClusteringNode = false
-	// TODO add error?
 	mu.Lock()
-	if virtRing.GetSize() < MaxCNs && request.NodeRequest.NodeType == Driver {
-		// virtRing.PushBack(request.NodeRequest)
-		response.IsClusteringNode = true
-		response.VirtualRing = virtRing // TODO deap copy?
-	}
+	virtRing.PushBack(request.RequestingNode)
 	mu.Unlock()
-	return nil
-}
-
-func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
-	// take the requests of the cliient and imediately send to mainClusterer
-	if request.RequestingNode.NodeType == Driver {
-		mu.Lock()
-		virtRing.PushBack(request.RequestingNode)
-		mu.Unlock()
-	}
 	response.Message = "ACK"
-	// TODO add error?
+	response.IsClusteringNode = true
+	log.Println(request.RequestingNode.Uuid.String(), " added to CN pool")
 	return nil
 }
 

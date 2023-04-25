@@ -1,8 +1,6 @@
 package types
 
 import (
-	"ridehost/cll"
-
 	"github.com/google/uuid"
 )
 
@@ -32,7 +30,7 @@ type ClientIntroducerResponse struct {
 	Message          string
 	Error            error
 	IsClusteringNode bool
-	VirtualRing      *cll.UniqueCLL
+	Members          []Node
 }
 
 type AckErrResponse struct {
