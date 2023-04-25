@@ -1,3 +1,9 @@
+all:  clean build
+
+#pull: 
+        #git pull
+        #git checkout feature/improve-logging
+
 build:
 	go build -o ./introducer introducer/introducer.go
 	go build -o ./client client/client.go
