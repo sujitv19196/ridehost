@@ -91,6 +91,7 @@ func acceptConnections() {
 		log.Fatal("listen error:", err)
 	}
 	defer conn.Close()
+	tellIntroducerReady()
 	rpc.Accept(conn)
 }
 
