@@ -15,3 +15,10 @@ clean:
 	rm introducer/introducer
 	rm clusteringNode/clusteringNode
 	rm mainClusterer/mainClusterer
+
+#git remote remove origin
+#git remote add origin git@github.com:sujitv19196/ridehost.git
+#git remote set-url --add --push origin git@github.com:sujitv19196/ridehost.git
+#git remote set-url --add --push origin pjain15@sp23-cs525-0301.cs.illinois.edu:/home/pjain15/ridehost
+#git push --set-upstream origin feature/improve-logging
+#git push
