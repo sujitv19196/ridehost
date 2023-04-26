@@ -22,8 +22,8 @@ var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // 
 
 type IntroducerRPC bool
 
-var mu sync.Mutex
-var virtRing *cll.UniqueCLL
+var mu = new(sync.Mutex)
+var virtRing = new(cll.UniqueCLL)
 var curClusteringNode int
 
 func main() {
@@ -38,8 +38,6 @@ func main() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-
-	mu = sync.Mutex{}
 
 	curClusteringNode = 0
 
@@ -58,22 +56,21 @@ func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroduc
 	mu.Lock()
 	if virtRing.GetSize() < MaxCNs && request.NodeRequest.NodeType == Driver {
 		response.IsClusteringNode = true
-		response.Members = virtRing.GetNodes(false)
 	}
 	mu.Unlock()
 	return nil
 }
 
 // RPC that client calls to let Introducer know it is ready to recv clsutering requests
-func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
-	mu.Lock()
-	virtRing.PushBack(request.RequestingNode)
-	mu.Unlock()
-	response.Message = "ACK"
-	response.IsClusteringNode = true
-	log.Println(request.RequestingNode.Uuid.String(), " added to CN pool")
-	return nil
-}
+// func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
+// 	mu.Lock()
+// 	virtRing.PushBack(request.RequestingNode)
+// 	mu.Unlock()
+// 	response.Message = "ACK"
+// 	response.IsClusteringNode = true
+// 	log.Println(request.RequestingNode.Uuid.String(), " added to CN pool")
+// 	return nil
+// }
 
 func startFailureDetector() {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
@@ -82,15 +79,14 @@ func startFailureDetector() {
 	}
 
 	mu.Lock()
-	virtRing = &cll.UniqueCLL{}
 	virtRing.SetDefaults()
 	mu.Unlock()
 	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
-	failureDetectorRPC.Mu = &mu
+	failureDetectorRPC.Mu = mu
 	failureDetectorRPC.VirtRing = virtRing
 	failureDetectorRPC.NodeItself = nil
 	failureDetectorRPC.Joined = nil
-	failureDetectorRPC.StartPinging = nil
+	// failureDetectorRPC.StartPinging = nil
 	rpc.Register(failureDetectorRPC)
 	conn, err := net.ListenTCP("tcp", address)
 	if err != nil {

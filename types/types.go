@@ -11,14 +11,15 @@ const (
 )
 
 type Node struct {
-	NodeType int
-	Ip       string
-	Uuid     uuid.UUID
-	StartLat float64
-	StartLng float64
-	DestLat  float64
-	DestLng  float64
-	Cost     float64
+	NodeType  int
+	Ip        string
+	Uuid      uuid.UUID
+	StartLat  float64
+	StartLng  float64
+	DestLat   float64
+	DestLng   float64
+	Cost      float64
+	PingReady bool
 }
 
 type JoinRequest struct {
@@ -30,7 +31,6 @@ type ClientIntroducerResponse struct {
 	Message          string
 	Error            error
 	IsClusteringNode bool
-	Members          []Node
 }
 
 type AckErrResponse struct {
@@ -111,6 +111,21 @@ type ClusterNodeRemovalRequest struct {
 	NodeIP string
 }
 
+type IntroducerNodeAddRequest struct {
+	NodeToAdd Node
+}
+
+type IntroducerNodeAddResponse struct {
+	Members []Node
+}
+
+type ClusterNodeAddRequest struct {
+	NodeToAdd Node
+}
+
+type ClusterNodeAddResponse struct {
+	Ack bool
+}
 type ClusterNodeRemovalResponse struct {
 	Ack bool
 }
@@ -131,4 +146,14 @@ type DriverInfo struct {
 type RiderInfo struct {
 	Response    bool
 	PhoneNumber string
+}
+
+type NodeFailureDetectingPingingStatusReq struct {
+	Uuid   string
+	Status bool
+}
+
+type NodeFailureDetectingPingingStatusRes struct {
+	Message string
+	Error   error
 }
