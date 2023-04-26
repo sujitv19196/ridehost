@@ -59,10 +59,10 @@ var logger = log.New(os.Stdout, "ClusteringNode ", log.Ldate|log.Ltime)
 // accepts connections from main clusterer
 // Cluster: takes cluster request and adds to membership list
 // StartClustering: performs coreset calculation on current membership list. Locks list until done and new requests are queeue'd.
-func Start(membershipList []Node) {
+func Start(clusteringNodes []Node) {
 	mu.Lock()
 	virtualRing.SetDefaults()
-	for _, node := range membershipList {
+	for _, node := range clusteringNodes {
 		virtualRing.PushBack(node)
 	}
 	mu.Unlock()
