@@ -49,9 +49,7 @@ def run_executable(executable_path, num_ittr):
             result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=90)
         except subprocess.TimeoutExpired:
             # If the program times out, send SIGKILL to the process
-            result.stdout = ""
-            result.stderr = "SIGKILL sent to process\n"
-            result.returncode = -9
+            result = subprocess.CompletedProcess(args=[], returncode=-9, stdout=b"", stderr=b"SIGKILL sent to process\n")
         
         output_lines = result.stdout.split('\n')
         for line in output_lines:
