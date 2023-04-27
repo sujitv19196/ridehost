@@ -45,6 +45,7 @@ var clusterNum int
 var nodeItself types.Node
 
 var riderAuctionState RiderAuctionState
+var timeStart time.Time
 
 func main() {
 	if len(os.Args) >= 3 {
@@ -118,6 +119,7 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 }
 
 func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *ClientClusterJoinResponse) error {
+	timeStart = time.Now()
 	mu.Lock()
 	defer mu.Unlock()
 	nodeItself = request.NodeItself
@@ -339,6 +341,7 @@ func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response *types.
 	response.Response = true
 	response.PhoneNumber = "RiderPhoneNumber"
 	// TODO graceful leave system
+	log.Println(time.Since(timeStart))
 	return nil
 }
 
@@ -368,13 +371,13 @@ func sendBid() {
 			if riderInfo.Response { // matched, exit system on match
 				log.Println("Matched! Rider number: ", riderInfo.PhoneNumber)
 				// TODO graceful leave system
-				os.Exit(0)
+				return
 			}
 		} // if no response or declined bid, try next rider in biddingPool
 	}
 	// terminate if no match
 	// TODO graceful leave system
-	os.Exit(0)
+	return
 }
 
 // cost functions and lat/lng distance calculations
@@ -443,6 +446,7 @@ func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
 	if err != nil {
 		log.Fatal("ClientRPC.RecvDriverInfo error: ", err)
 	}
+	log.Println(time.Since(timeStart))
 	return *response
 }
 
