@@ -119,6 +119,7 @@ func forwardRequestToClusterer(request JoinRequest) {
 	if err != nil {
 		os.Stderr.WriteString("ClusteringNodeRPC.Cluster error: " + err.Error())
 	}
+	log.Println("Forward request: ", request.NodeRequest.Uuid.String())
 }
 
 func forwardRequestToMainClusterer(request JoinRequest) {
