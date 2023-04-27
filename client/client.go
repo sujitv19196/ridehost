@@ -348,9 +348,9 @@ func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response *types.
 // driver sending a bid to a rider
 func sendBid() {
 	// get current list of riders in ring
-	mu.Lock()
+	// mu.Lock()
 	biddingPool := virtRing.GetNodes(true)
-	mu.Unlock()
+	// mu.Unlock()
 	// order list by cost (low to high)
 	sort.Slice(biddingPool, func(i, j int) bool {
 		biddingPool[i].Cost = driverCost(nodeItself, biddingPool[i])
