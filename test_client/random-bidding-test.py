@@ -3,7 +3,6 @@ import math
 import subprocess
 import re
 from sys import executable
-from subprocess import PIPE
 
 def generate_random_point_in_CU(): 
     # Define the center point (Champaign-Urbana) as a latitude-longitude pair
@@ -39,14 +38,14 @@ def run_executable(executable_path, num_ittr):
     None.
     """
 
-    times = []
+    times = [0]
     for i in range(num_ittr):
         nodeType = random.randint(0, 1)
         startLat, startLng = generate_random_point_in_CU()
         destLat, destLng = generate_random_point_in_CU()
     
         try: 
-            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=PIPE, stderr=PIPE, timeout=90)
+            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], capture_output=True, text=True, timeout=90)
         except subprocess.TimeoutExpired:
             # If the program times out, send SIGKILL to the process
             result.stdout = b""
