@@ -89,7 +89,7 @@ func startFailureDetector() {
 		log.Fatal("listen error:", err)
 	}
 	tellIntroducerFDReady()
-	go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, introducerIp)
+	go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, introducerIp, nodeItself.Uuid.String())
 	go failureDetector.AcceptPings(ip, mu, joined)
 	tellIntroducerFDPingingReady()
 	rpc.Accept(conn)

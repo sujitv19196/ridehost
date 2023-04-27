@@ -108,7 +108,7 @@ type ClientClusterPingingStatusResponse struct {
 }
 
 type ClusterNodeRemovalRequest struct {
-	NodeIP string
+	NodeUuid string
 }
 
 type IntroducerNodeAddRequest struct {
