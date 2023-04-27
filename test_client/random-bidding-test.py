@@ -45,7 +45,7 @@ def run_executable(executable_path, num_ittr):
         destLat, destLng = generate_random_point_in_CU()
     
         try: 
-            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], capture_output=True, text=True, timeout=90)
+            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=90)
         except subprocess.TimeoutExpired:
             # If the program times out, send SIGKILL to the process
             result.stdout = b""
@@ -60,4 +60,3 @@ def run_executable(executable_path, num_ittr):
     average = sum(times) / len(times)
     print(average)
 run_executable("client/client", 10)
-  
