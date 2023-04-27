@@ -25,7 +25,7 @@ import (
 type ClientRPC struct{} // RPC
 
 // rider auction state
-type RiderAuctionState struct {
+type AuctionState struct {
 	mu          sync.Mutex
 	acceptedBid bool
 }
@@ -44,7 +44,7 @@ var clusterRepIP string
 var clusterNum int
 var nodeItself types.Node
 
-var riderAuctionState RiderAuctionState
+var auctionState AuctionState
 var timeStart time.Time
 
 func main() {
@@ -95,7 +95,7 @@ func main() {
 	go sendPings()
 	go acceptPings()
 
-	riderAuctionState = RiderAuctionState{mu: sync.Mutex{}, acceptedBid: false}
+	auctionState = AuctionState{mu: sync.Mutex{}, acceptedBid: false}
 	acceptClusteringConnections()
 }
 
@@ -317,16 +317,17 @@ func sendListRemoval(neighborIp string, IPs []string) {
 
 // rider receiving a bid
 func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) error {
-	riderAuctionState.mu.Lock()
-	defer riderAuctionState.mu.Unlock()
+	auctionState.mu.Lock()
+	defer auctionState.mu.Unlock()
 	response.Response = true
-	if riderAuctionState.acceptedBid { // if the rider already accepted a bid
+	if auctionState.acceptedBid { // if the rider already accepted a bid
 		response.Accept = false
 		log.Println("Bid Rejected, already accepted bid")
 		return nil
 	}
 
 	if bid.Cost < RiderMaxCost { // if bid is within ddrivere price range
+		auctionState.acceptedBid = true
 		response.Accept = true
 		log.Println("Bid Accepted, cost: ", bid.Cost)
 	} else {
