@@ -68,7 +68,7 @@ func main() {
 	myIPStr = myIP.String()
 	conn.Close()
 
-	clientIp = myIPStr + ":" + strconv.Itoa(Ports["clientRPC"]) //add port to IP
+	clientIp = myIPStr
 	fmt.Println(clientIp)
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
