@@ -178,7 +178,7 @@ func (fdr *FailureDetectorRPC) IntroducerAddNode(request types.IntroducerNodeAdd
 	IPs := fdr.VirtRing.GetIPList()
 	fdr.Mu.Unlock()
 	defer fdr.Cond.Broadcast()
-	sendAdd(request.NodeToAdd, IPs, fdr.NodeItself.Ip, request.NodeToAdd.Ip)
+	sendAdd(request.NodeToAdd, IPs, "introducer", request.NodeToAdd.Ip)
 	log.Printf("added node %s\n", request.NodeToAdd.Ip)
 	response.Members = fdr.VirtRing.GetNodes(false)
 	return nil
