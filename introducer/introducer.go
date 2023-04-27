@@ -23,6 +23,7 @@ var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // 
 type IntroducerRPC bool
 
 var mu = new(sync.Mutex)
+var cond = sync.NewCond(mu)
 var virtRing = new(cll.UniqueCLL)
 var curClusteringNode int
 
@@ -83,6 +84,7 @@ func startFailureDetector() {
 	mu.Unlock()
 	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
 	failureDetectorRPC.Mu = mu
+	failureDetectorRPC.Cond = cond
 	failureDetectorRPC.VirtRing = virtRing
 	failureDetectorRPC.NodeItself = nil
 	failureDetectorRPC.Joined = nil
@@ -97,11 +99,15 @@ func startFailureDetector() {
 
 func forwardRequestToClusterer(request JoinRequest) {
 	mu.Lock()
+	for virtRing.GetSize() <= 0 {
+		cond.Wait()
+	}
 	clustererList := virtRing.GetNodes(false)
 	curClusteringNode = curClusteringNode % len(clustererList)
 	clustererIP := clustererList[curClusteringNode].Ip
 	curClusteringNode = (curClusteringNode + 1) % len(clustererList)
 	mu.Unlock()
+
 	conn, err := net.Dial("tcp", clustererIP+strconv.Itoa(constants.Ports["clusteringNode"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")

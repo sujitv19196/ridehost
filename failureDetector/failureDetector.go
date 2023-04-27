@@ -19,6 +19,7 @@ import (
 
 type FailureDetectorRPC struct {
 	Mu       *sync.Mutex
+	Cond     *sync.Cond
 	VirtRing *cll.UniqueCLL
 	Joined   *bool
 	// StartPinging *bool
@@ -163,6 +164,7 @@ func (fdr *FailureDetectorRPC) SendNodeFailure(request types.ClusterNodeRemovalR
 func (fdr *FailureDetectorRPC) NodeAdd(request types.ClusterNodeAddRequest, response *types.ClusterNodeAddResponse) error {
 	fdr.Mu.Lock()
 	defer fdr.Mu.Unlock()
+	defer fdr.Cond.Broadcast()
 	fdr.VirtRing.PushBack(request.NodeToAdd)
 	log.Printf("adding node %s\n", request.NodeToAdd.Ip)
 	response.Ack = true
