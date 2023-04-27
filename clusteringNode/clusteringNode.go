@@ -64,6 +64,7 @@ var logger = log.New(os.Stdout, "ClusteringNode ", log.Ldate|log.Ltime)
 // StartClustering: performs coreset calculation on current membership list. Locks list until done and new requests are queeue'd.
 func Start(thisNode Node, introducer string) {
 	mu.Lock()
+	virtualRing.SetDefaults()
 	nodeItself = thisNode
 	introducerIp = introducer
 	mu.Unlock()
