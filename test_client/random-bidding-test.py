@@ -46,7 +46,7 @@ def run_executable(executable_path, num_ittr):
         destLat, destLng = generate_random_point_in_CU()
     
         try: 
-            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=PIPE, stderr=PIPE, text=True, timeout=90)
+            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=PIPE, stderr=PIPE, timeout=90)
         except subprocess.TimeoutExpired:
             # If the program times out, send SIGKILL to the process
             result.stdout = b""
