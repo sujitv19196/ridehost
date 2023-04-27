@@ -126,6 +126,7 @@ func tellIntroducerFDReady() {
 	if err != nil {
 		log.Fatal("FailureDetectorRPC.IntroducerAddNode error: ", err)
 	}
+	log.Println("Tell Introdcuer FDR Ready")
 	for _, node := range response.Members {
 		virtualRing.PushBack(node)
 	}
