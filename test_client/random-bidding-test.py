@@ -51,7 +51,7 @@ def run_executable(executable_path, num_ittr):
             # If the program times out, send SIGKILL to the process
             result = subprocess.CompletedProcess(args=[], returncode=-9, stdout=b"", stderr=b"SIGKILL sent to process\n")
         
-        output_lines = result.stdout.split(b'\n')
+        output_lines = result.stdout.decode().split(b'\n')
         for line in output_lines:
             match = re.search(r'Time: (\d+\.\d+)ms', line)
             if match:
