@@ -43,8 +43,8 @@ var ML MembershipList
 // VM 2
 var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 // var mainClustererIp = "0.0.0.0:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
-var introducerIp string // TODO FILL!!!!!!!!!!!
-var nodeItself Node     // TODO initialize!!!!!
+var introducerIp string
+var nodeItself Node
 
 type ClusteringNodeRPC bool
 
@@ -62,9 +62,10 @@ var logger = log.New(os.Stdout, "ClusteringNode ", log.Ldate|log.Ltime)
 // accepts connections from main clusterer
 // Cluster: takes cluster request and adds to membership list
 // StartClustering: performs coreset calculation on current membership list. Locks list until done and new requests are queeue'd.
-func Start(thisNode Node) {
+func Start(thisNode Node, introducer string) {
 	mu.Lock()
 	nodeItself = thisNode
+	introducerIp = introducer
 	mu.Unlock()
 	go acceptConnections()
 	startFailureDetector()

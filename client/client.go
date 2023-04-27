@@ -115,7 +115,7 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	}
 	if response.IsClusteringNode {
 		log.Println("Assigned as CN, spinning up CN proc")
-		go clusteringNode.Start(nodeItself)
+		go clusteringNode.Start(nodeItself, introducerIp)
 	}
 	return *response
 }
