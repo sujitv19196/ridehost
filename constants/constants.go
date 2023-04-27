@@ -10,7 +10,7 @@ const PingFrequency = 3 * time.Second
 
 const UDPPingAckTimeout = 2000 * time.Millisecond
 
-const NumClusters = 5
+const NumClusters = 2
 
 const ClusteringPeriod = 1 // in minutes
 
