@@ -36,7 +36,7 @@ def run_executable(executable_path, num_ittr):
         result = None
         output = None
         try: 
-            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=75)
+            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=65)
             output = result.stdout
         except subprocess.TimeoutExpired as e:
             # If the program times out, save the output before sending SIGINT to the process
@@ -56,4 +56,4 @@ def run_executable(executable_path, num_ittr):
         average = sum(times) / len(times)
         print(average)
 
-run_executable("client/client", 2)
+run_executable("client/client", 10)
