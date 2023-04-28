@@ -342,7 +342,7 @@ func (c *ClientRPC) RecvDriverInfo(driverInfo types.DriverInfo, response *types.
 	response.Response = true
 	response.PhoneNumber = "RiderPhoneNumber"
 	// TODO graceful leave system
-	log.Println("Time: ", time.Since(timeStart))
+	fmt.Println("Time: ", time.Since(timeStart))
 	return nil
 }
 
@@ -447,7 +447,7 @@ func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
 	if err != nil {
 		log.Fatal("ClientRPC.RecvDriverInfo error: ", err)
 	}
-	log.Println("Time: ", time.Since(timeStart))
+	fmt.Println("Time: ", time.Since(timeStart))
 	return *response
 }
 
