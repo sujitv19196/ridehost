@@ -27,7 +27,7 @@ def generate_random_point_in_CU():
     return (new_lat, new_long) 
 
 def run_executable(executable_path, num_ittr):
-    times = [0]
+    times = []
     for i in range(num_ittr):
         nodeType = random.randint(0, 1)
         startLat, startLng = generate_random_point_in_CU()
@@ -36,7 +36,7 @@ def run_executable(executable_path, num_ittr):
         result = None
         output = None
         try: 
-            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=90)
+            result = subprocess.run([executable_path, str(nodeType), "172.22.150.238", str(startLat), str(startLng), str(destLat), str(destLng)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=75)
             output = result.stdout
         except subprocess.TimeoutExpired as e:
             # If the program times out, save the output before sending SIGINT to the process
@@ -52,7 +52,8 @@ def run_executable(executable_path, num_ittr):
             if match:
                 times.append(float(match.group(1)))
 
-    average = sum(times) / len(times)
-    print(average)
+    if (len(times) != 0):
+        average = sum(times) / len(times)
+        print(average)
 
 run_executable("client/client", 2)
