@@ -53,6 +53,7 @@ def run_executable(executable_path, num_ittr):
         
         s = str(result.stdout)
         output_lines = s.split('\n')
+        print(output_lines)
         for line in output_lines:
             match = re.search(r'Time: (\d+\.\d+)ms', line)
             if match:
