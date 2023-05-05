@@ -35,7 +35,7 @@ type FailureDetectorRPC struct {
 // 	return nil
 // }
 
-func (fdr *FailureDetectorRPC) StartPingingNode(request types.NodeFailureDetectingPingingStatusReq, response *types.NodeFailureDetectingPingingStatusRes) error {
+func (fdr *FailureDetectorRPC) IntroducerStartPingingNode(request types.NodeFailureDetectingPingingStatusReq, response *types.NodeFailureDetectingPingingStatusRes) error {
 	fdr.Mu.Lock()
 	defer fdr.Mu.Unlock()
 	fdr.VirtRing.GetNode(request.Uuid).PingReady = request.Status
@@ -43,6 +43,15 @@ func (fdr *FailureDetectorRPC) StartPingingNode(request types.NodeFailureDetecti
 	IPs := fdr.VirtRing.GetIPList()
 	IPs = append(IPs, constants.MainClustererIp)
 	sendListStartPinging(request, IPs, fdr.NodeItself.Ip)
+	response.Message = "ACK"
+	return nil
+}
+
+func (fdr *FailureDetectorRPC) StartPingingNode(request types.NodeFailureDetectingPingingStatusReq, response *types.NodeFailureDetectingPingingStatusRes) error {
+	fdr.Mu.Lock()
+	defer fdr.Mu.Unlock()
+	fdr.VirtRing.GetNode(request.Uuid).PingReady = request.Status
+	log.Printf("pinging status changed to %t\n", request.Status)
 	response.Message = "ACK"
 	return nil
 }
