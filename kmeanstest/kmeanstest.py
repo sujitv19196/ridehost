@@ -89,10 +89,12 @@ def run_executable(executable_path, coords):
         pool = Pool(processes=len(coords))
         for i in range(len(coords)):
             nodeType = random.randint(0, 1)
-            if nodeType == 1: ## rider
-                pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])] + [str(coords[i][2])] + [str(coords[i][3])]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
-            else: ## driver
-                pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
+            pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])] + [str(coords[i][2])] + [str(coords[i][3])]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
+            
+            # if nodeType == 1: ## rider
+            #     pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])] + [str(coords[i][2])] + [str(coords[i][3])]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
+            # else: ## driver
+            #     pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["172.22.150.238"] + [str(coords[i][0])] + [str(coords[i][1])]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
 
             # pool.apply_async(subprocess.run, args=[[executable_path] + [str(nodeType)] + ["0.0.0.0"] + [str(coords[i][0])] + [str(coords[i][1])] + [str(i)]], kwds={'stdout': subprocess.PIPE, 'universal_newlines': True})
         pool.close()
