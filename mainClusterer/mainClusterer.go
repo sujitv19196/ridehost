@@ -372,7 +372,7 @@ func subtractnode(list1 []Node, list2 []Node) []Node {
 
 // send cluster info to client nodes
 func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
-	conn, err := net.Dial("tcp", node.Ip)
+	conn, err := net.Dial("tcp", node.Ip+":"+strconv.Itoa(constants.Ports["clientRPC"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
