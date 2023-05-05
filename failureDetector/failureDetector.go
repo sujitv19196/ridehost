@@ -48,9 +48,12 @@ func (fdr *FailureDetectorRPC) StartPingingNode(request types.NodeFailureDetecti
 }
 
 func sendListStartPinging(request types.NodeFailureDetectingPingingStatusReq, IPs []string, myIPStr string) {
+	var wg sync.WaitGroup
 	for _, ip := range IPs {
 		if ip != myIPStr && ip != request.Ip {
+			wg.Add(1)
 			go func(ip string) {
+				defer wg.Done()
 				conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["failureDetector"]), constants.TCPTimeout)
 				// only throw error when can't connect to non-failed node
 				if err != nil {
@@ -68,6 +71,7 @@ func sendListStartPinging(request types.NodeFailureDetectingPingingStatusReq, IP
 			}(ip)
 		}
 	}
+	wg.Wait()
 }
 
 func SendPings(mu *sync.Mutex, joined *bool, virtRing *cll.UniqueCLL, myIPStr string, extraIPs []string, myUuid string) {
@@ -212,9 +216,12 @@ func (fdr *FailureDetectorRPC) IntroducerAddNode(request types.IntroducerNodeAdd
 }
 
 func sendAdd(node types.Node, IPs []string, myIPStr string, addedIp string) {
+	var wg sync.WaitGroup
 	for _, ip := range IPs {
 		if ip != myIPStr && ip != addedIp {
+			wg.Add(1)
 			go func(ip string, nodeToAdd types.Node) {
+				defer wg.Done()
 				conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["failureDetector"]), constants.TCPTimeout)
 				// only throw error when can't connect to non-failed node
 				if err != nil {
@@ -234,6 +241,7 @@ func sendAdd(node types.Node, IPs []string, myIPStr string, addedIp string) {
 			}(ip, node)
 		}
 	}
+	wg.Wait()
 }
 
 func RemoveNode(nodeUuid string, nodeIP string, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, extraIPs []string) {
@@ -250,9 +258,12 @@ func RemoveNode(nodeUuid string, nodeIP string, mu *sync.Mutex, virtRing *cll.Un
 }
 
 func sendListRemoval(neighborUuid string, neighborIp string, IPs []string, myIPStr string) {
+	var wg sync.WaitGroup
 	for _, ip := range IPs {
 		if ip != myIPStr {
+			wg.Add(1)
 			go func(ip string, neighborIp string) {
+				defer wg.Done()
 				conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["failureDetector"]), constants.TCPTimeout)
 				// only throw error when can't connect to non-failed node
 				if err != nil {
@@ -275,4 +286,5 @@ func sendListRemoval(neighborUuid string, neighborIp string, IPs []string, myIPS
 			}(ip, neighborIp)
 		}
 	}
+	wg.Wait()
 }
