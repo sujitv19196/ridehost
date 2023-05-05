@@ -324,8 +324,10 @@ func coresetUnion() map[Node]int {
 			}
 		}
 	}
+	logger.Println("length of allnodes: ", len(allnodes))
+	logger.Println("length of coresetnodes: ", len(coresetnodes))
 	restnodes := subtractnode(allnodes, coresetnodes)
-
+	logger.Println("length of restnodes: ", len(restnodes))
 	clusterresult := ClusterResult{}
 	clusterresult = CentralizedKMeansClustering(coresetnodes, NumClusters)
 	num := 0

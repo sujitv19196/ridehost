@@ -397,10 +397,12 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	w := sampleuv.NewWeighted(mpProb, nil)
 	q_indexes := []int{}
 	qp := []Point{}
+	qp_nodes := []Node{}
 	for i := 0; i < ti; i++ {
 		index, _ := w.Take()
 		q_indexes = append(q_indexes, index)
 		qp = append(qp, data[index])
+		qp_nodes = append(qp_nodes, Nodelist[index])
 	}
 
 	wq := []float64{}
@@ -421,8 +423,13 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 
 	core := Coreset{}
 	coreset := qp
+	coresetRepresentNodes := qp_nodes
 	for _, point := range clusterresults.RepresentCenterPoints {
 		coreset = append(coreset, point)
+		coresetRepresentNodes = append(coresetRepresentNodes)
+	}
+	for _, n := range clusterresults.RepresentCenterNodes {
+		coresetRepresentNodes = append(coresetRepresentNodes, n)
 	}
 	weights := wq
 	wb := []float64{}
@@ -462,7 +469,7 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 
 	core.Coreset = coreset
 	core.Weights = weights
-	core.CoresetNodes = clusterresults.RepresentCenterNodes
+	core.CoresetNodes = coresetRepresentNodes
 	core.Tempcluster = clusterresults.ClusterMaps
 
 	logger.Println("Resultant Local Coreset : ", core)

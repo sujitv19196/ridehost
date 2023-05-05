@@ -27,7 +27,7 @@ def generate_random_points(num_points, min_lat, max_lat, min_lon, max_lon):
 
 def generate_chicago_points():
     
-    all_df = pd.read_csv("./Taxi_Trips.csv")
+    all_df = pd.read_csv("/home/pjain15/ridehost/kmeanstest/Taxi_Trips.csv")
     
     all_df["Trip Start Timestamp"] = pd.to_datetime(all_df["Trip Start Timestamp"])
     # df = all_df[all_df["Trip Start Timestamp"] > pd.to_datetime("2023-03-25")]
