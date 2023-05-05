@@ -41,7 +41,7 @@ var numClusterNodes = 0
 var ML MembershipList
 
 // VM 2
-var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
+var mainClustererIp = constants.MainClustererIp + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 // var mainClustererIp = "0.0.0.0:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 var introducerIp string
 var nodeItself Node
@@ -90,7 +90,7 @@ func startFailureDetector() {
 		log.Fatal("listen error:", err)
 	}
 	tellIntroducerFDReady()
-	go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, introducerIp, nodeItself.Uuid.String())
+	go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, []string{introducerIp, constants.MainClustererIp}, nodeItself.Uuid.String())
 	go failureDetector.AcceptPings(ip, mu, joined)
 	tellIntroducerFDPingingReady()
 	rpc.Accept(conn)
@@ -108,7 +108,7 @@ func tellIntroducerFDPingingReady() {
 	response := new(types.NodeFailureDetectingPingingStatusRes)
 	nodeItself.PingReady = true
 	virtualRing.GetNode(nodeItself.Uuid.String()).PingReady = true
-	err = client.Call("FailureDetectorRPC.StartPingingNode", NodeFailureDetectingPingingStatusReq{Uuid: nodeItself.Uuid.String(), Status: true}, &response)
+	err = client.Call("FailureDetectorRPC.StartPingingNode", NodeFailureDetectingPingingStatusReq{Uuid: nodeItself.Uuid.String(), Ip: nodeItself.Ip, Status: true}, &response)
 	if err != nil {
 		log.Fatal("FailureDetectorRPC.StartPingingNode error: ", err)
 	}

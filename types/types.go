@@ -150,6 +150,7 @@ type RiderInfo struct {
 
 type NodeFailureDetectingPingingStatusReq struct {
 	Uuid   string
+	Ip     string
 	Status bool
 }
 

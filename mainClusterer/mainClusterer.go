@@ -6,7 +6,10 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"ridehost/cll"
+	"ridehost/constants"
 	. "ridehost/constants"
+	"ridehost/failureDetector"
 	. "ridehost/kMeansClustering"
 	. "ridehost/types"
 	"strconv"
@@ -44,9 +47,14 @@ var coresetList CoresetList
 
 var logger = log.New(os.Stdout, "MainClusterer", log.Ldate|log.Ltime)
 
+var mu = new(sync.Mutex)
+var cond = sync.NewCond(mu)
+var virtRing = new(cll.UniqueCLL)
+
 func main() {
 	coresetList.cond = *sync.NewCond(&coresetList.mu)
 	go acceptConnections()
+	go startFailureDetector()
 
 	for { // send request to start clustering to all nodes every ClusteringPeriod
 		time.Sleep(ClusteringPeriod * time.Minute) // TODO might want a cond var here
@@ -92,6 +100,30 @@ func main() {
 			go sendClusterInfo(node, clusterinfo)
 		}
 	}
+}
+
+func startFailureDetector() {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+
+	mu.Lock()
+	virtRing.SetDefaults()
+	mu.Unlock()
+	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
+	failureDetectorRPC.Mu = mu
+	failureDetectorRPC.Cond = cond
+	failureDetectorRPC.VirtRing = virtRing
+	failureDetectorRPC.NodeItself = nil
+	failureDetectorRPC.Joined = nil
+	// failureDetectorRPC.StartPinging = nil
+	rpc.Register(failureDetectorRPC)
+	conn, err := net.ListenTCP("tcp", address)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	rpc.Accept(conn)
 }
 
 func acceptConnections() {

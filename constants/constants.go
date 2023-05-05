@@ -23,3 +23,5 @@ const RiderMaxCost float64 = 100 //km
 const DivisorT = 1.2 //used by clustering node to find T
 
 const MaxCNs int = 10
+
+const MainClustererIp = "172.22.153.8"

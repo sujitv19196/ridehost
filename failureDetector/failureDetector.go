@@ -40,11 +40,37 @@ func (fdr *FailureDetectorRPC) StartPingingNode(request types.NodeFailureDetecti
 	defer fdr.Mu.Unlock()
 	fdr.VirtRing.GetNode(request.Uuid).PingReady = request.Status
 	log.Printf("pinging status changed to %t\n", request.Status)
+	IPs := fdr.VirtRing.GetIPList()
+	IPs = append(IPs, constants.MainClustererIp)
+	sendListStartPinging(request, IPs, fdr.NodeItself.Ip)
 	response.Message = "ACK"
 	return nil
 }
 
-func SendPings(mu *sync.Mutex, joined *bool, virtRing *cll.UniqueCLL, myIPStr string, introducerIP string, myUuid string) {
+func sendListStartPinging(request types.NodeFailureDetectingPingingStatusReq, IPs []string, myIPStr string) {
+	for _, ip := range IPs {
+		if ip != myIPStr && ip != request.Ip {
+			go func(ip string) {
+				conn, err := net.DialTimeout("tcp", ip+":"+strconv.Itoa(constants.Ports["failureDetector"]), constants.TCPTimeout)
+				// only throw error when can't connect to non-failed node
+				if err != nil {
+					os.Stderr.WriteString(err.Error() + "\n")
+					os.Exit(1)
+				}
+
+				client := rpc.NewClient(conn)
+				response := new(types.NodeFailureDetectingPingingStatusRes)
+				err = client.Call("FailureDetectorRPC.StartPingingNode", request, response)
+				if err != nil {
+					log.Fatal("StartPingingNode error: ", err)
+				}
+				conn.Close()
+			}(ip)
+		}
+	}
+}
+
+func SendPings(mu *sync.Mutex, joined *bool, virtRing *cll.UniqueCLL, myIPStr string, extraIPs []string, myUuid string) {
 	for {
 		neighbors := []types.Node{}
 		mu.Lock()
@@ -56,7 +82,7 @@ func SendPings(mu *sync.Mutex, joined *bool, virtRing *cll.UniqueCLL, myIPStr st
 		for _, neighbor := range neighbors {
 			if neighbor.PingReady {
 				wg.Add(1)
-				go AttemptPings(neighbor.Uuid.String(), neighbor.Ip, &wg, mu, virtRing, myIPStr, introducerIP)
+				go AttemptPings(neighbor.Uuid.String(), neighbor.Ip, &wg, mu, virtRing, myIPStr, extraIPs)
 			}
 		}
 		wg.Wait()
@@ -65,7 +91,7 @@ func SendPings(mu *sync.Mutex, joined *bool, virtRing *cll.UniqueCLL, myIPStr st
 	}
 }
 
-func AttemptPings(neighborUuid string, neighborIP string, wg *sync.WaitGroup, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, introducerIP string) {
+func AttemptPings(neighborUuid string, neighborIP string, wg *sync.WaitGroup, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, extraIPs []string) {
 	defer wg.Done()
 	if !sendPing(neighborIP) {
 		for i := 0; i < 2; i++ {
@@ -74,7 +100,7 @@ func AttemptPings(neighborUuid string, neighborIP string, wg *sync.WaitGroup, mu
 				return
 			}
 		}
-		RemoveNode(neighborUuid, neighborIP, mu, virtRing, myIPStr, introducerIP)
+		RemoveNode(neighborUuid, neighborIP, mu, virtRing, myIPStr, extraIPs)
 	}
 }
 
@@ -177,6 +203,7 @@ func (fdr *FailureDetectorRPC) IntroducerAddNode(request types.IntroducerNodeAdd
 	fdr.VirtRing.PushBack(request.NodeToAdd)
 	IPs := fdr.VirtRing.GetIPList()
 	fdr.Mu.Unlock()
+	IPs = append(IPs, constants.MainClustererIp)
 	defer fdr.Cond.Broadcast()
 	sendAdd(request.NodeToAdd, IPs, "introducer", request.NodeToAdd.Ip)
 	log.Printf("added node %s\n", request.NodeToAdd.Ip)
@@ -209,14 +236,14 @@ func sendAdd(node types.Node, IPs []string, myIPStr string, addedIp string) {
 	}
 }
 
-func RemoveNode(nodeUuid string, nodeIP string, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, introducerIP string) {
+func RemoveNode(nodeUuid string, nodeIP string, mu *sync.Mutex, virtRing *cll.UniqueCLL, myIPStr string, extraIPs []string) {
 	mu.Lock()
 	// get list before removing node so failed node gets rpc saying it failed
 	IPs := virtRing.GetIPList()
 	virtRing.RemoveNode(nodeUuid)
 	mu.Unlock()
-	if len(introducerIP) > 0 {
-		IPs = append(IPs, introducerIP)
+	if len(extraIPs) > 0 {
+		IPs = append(IPs, extraIPs...)
 	}
 	sendListRemoval(nodeUuid, nodeIP, IPs, myIPStr)
 	log.Printf("removed node %s\n", nodeIP)
