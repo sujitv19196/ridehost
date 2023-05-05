@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -102,9 +103,12 @@ func startFailureDetector() {
 
 func forwardRequestToClusterer(request JoinRequest) {
 	mu.Lock()
+	fmt.Println("before wait")
 	for virtRing.GetSize() <= 0 {
+		fmt.Println("wating")
 		cond.Wait()
 	}
+	fmt.Println("after wait")
 	clustererList := virtRing.GetNodes(false)
 	curClusteringNode = curClusteringNode % len(clustererList)
 	clustererIP := clustererList[curClusteringNode].Ip
