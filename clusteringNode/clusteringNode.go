@@ -52,6 +52,7 @@ type ClusteringNodeRPC bool
 // var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
 
 var mu = new(sync.Mutex)
+var cond = sync.NewCond(mu)
 var virtualRing = new(cll.UniqueCLL)
 var joined = new(bool)
 var startPinging = new(bool)
@@ -79,6 +80,7 @@ func startFailureDetector() {
 	}
 	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
 	failureDetectorRPC.Mu = mu
+	failureDetectorRPC.Cond = cond
 	failureDetectorRPC.NodeItself = &nodeItself
 	failureDetectorRPC.VirtRing = virtualRing
 	*joined = true
