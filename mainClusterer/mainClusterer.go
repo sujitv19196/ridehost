@@ -61,8 +61,7 @@ func main() {
 		start := time.Now()
 		mu.Lock()
 		for _, node := range virtRing.GetIPList() {
-			logger.Println("Send StartClustering Request to: ", node)
-			sendStartClusteringRPC(node)
+			go sendStartClusteringRPC(node + ":" + strconv.Itoa(Ports["clusteringNode"]))
 		}
 
 		// wait for all coresets to be recvd
