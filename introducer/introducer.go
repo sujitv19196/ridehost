@@ -15,6 +15,7 @@ import (
 )
 
 var ip net.IP
+var ipStr string
 
 // VM 2
 var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
@@ -42,6 +43,7 @@ func main() {
 
 	curClusteringNode = 0
 
+	ipStr = getMyIpStr()
 	startFailureDetector()
 
 	rpc.Accept(conn)
@@ -86,7 +88,7 @@ func startFailureDetector() {
 	failureDetectorRPC.Mu = mu
 	failureDetectorRPC.Cond = cond
 	failureDetectorRPC.VirtRing = virtRing
-	failureDetectorRPC.NodeItself = nil
+	failureDetectorRPC.NodeItself = &Node{Ip: ipStr}
 	failureDetectorRPC.Joined = nil
 	// failureDetectorRPC.StartPinging = nil
 	rpc.Register(failureDetectorRPC)
@@ -134,4 +136,16 @@ func forwardRequestToMainClusterer(request JoinRequest) {
 	if err != nil {
 		os.Stderr.WriteString("MainClustererRPC.ClusteringRequest error: " + err.Error())
 	}
+}
+
+// get this machine's IP address
+func getMyIpStr() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+	defer conn.Close()
+	myIP := conn.LocalAddr().(*net.UDPAddr).IP
+	return myIP.String()
 }
