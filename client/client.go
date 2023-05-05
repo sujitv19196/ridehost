@@ -8,9 +8,9 @@ import (
 	"net/rpc"
 	"os"
 	"ridehost/cll"
+	"ridehost/clusteringNode"
 	"ridehost/constants"
 	. "ridehost/constants"
-	"ridehost/failureDetector"
 	"ridehost/types"
 	. "ridehost/types"
 	"sort"
@@ -37,7 +37,6 @@ var mu sync.Mutex
 var isRep bool
 var virtRing *cll.UniqueCLL
 var joined bool
-var startPinging bool
 var clusterRepIP string
 var clusterNum int
 var nodeItself types.Node
@@ -69,7 +68,7 @@ func main() {
 	myIPStr = myIP.String()
 	conn.Close()
 
-	clientIp = myIPStr + ":" + strconv.Itoa(Ports["clientRPC"]) //add port to IP
+	clientIp = myIPStr
 	fmt.Println(clientIp)
 	uuid := uuid.New()
 	nodeType, _ := strconv.Atoi(os.Args[1])
@@ -80,9 +79,11 @@ func main() {
 	if nodeType == Rider {
 		destLat, _ := strconv.ParseFloat(os.Args[5], 64)
 		destLng, _ := strconv.ParseFloat(os.Args[6], 64)
-		req = JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng, DestLat: destLat, DestLng: destLng}, IntroducerIp: introducerIp}
+		nodeItself = Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng, DestLat: destLat, DestLng: destLng}
+		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: introducerIp}
 	} else {
-		req = JoinRequest{NodeRequest: Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng}, IntroducerIp: introducerIp}
+		nodeItself = Node{NodeType: nodeType, Ip: clientIp, Uuid: uuid, StartLat: startLat, StartLng: startLng}
+		req = JoinRequest{NodeRequest: nodeItself, IntroducerIp: introducerIp}
 	}
 	r := joinSystem(req)
 	log.Println("From Introducer: ", r.Message)
@@ -90,11 +91,9 @@ func main() {
 	mu = sync.Mutex{}
 	mu.Lock()
 	joined = false
-	startPinging = false
 	mu.Unlock()
 
 	riderAuctionState = RiderAuctionState{mu: sync.Mutex{}, acceptedBid: false}
-	startFailureDetector()
 	acceptClusteringConnections()
 }
 
@@ -114,13 +113,17 @@ func joinSystem(request types.JoinRequest) types.ClientIntroducerResponse {
 	if err != nil {
 		log.Fatal("IntroducerRPC.ClientJoin error: ", err)
 	}
+	if response.IsClusteringNode {
+		log.Println("Assigned as CN, spinning up CN proc")
+		go clusteringNode.Start(nodeItself, introducerIp)
+	}
 	return *response
 }
 
 func (c *ClientRPC) JoinCluster(request ClientClusterJoinRequest, response *ClientClusterJoinResponse) error {
 	mu.Lock()
 	defer mu.Unlock()
-	nodeItself = request.NodeItself
+	// nodeItself = request.NodeItself
 	clusterNum = request.ClusterNum
 	clusterRepIP = request.ClusterRep.Ip
 	isRep = clusterRepIP == myIPStr
@@ -195,14 +198,11 @@ func sendBid() {
 			riderInfo := sendDriveInfo(rider, driverInfo)
 			if riderInfo.Response { // matched, exit system on match
 				log.Println("Matched! Rider number: ", riderInfo.PhoneNumber)
-				// TODO graceful leave system
-				os.Exit(0)
+				return
 			}
 		} // if no response or declined bid, try next rider in biddingPool
 	}
 	// terminate if no match
-	// TODO graceful leave system
-	os.Exit(0)
 }
 
 // cost functions and lat/lng distance calculations
@@ -242,7 +242,7 @@ func distanceBetweenCoords(lat1 float64, lng1 float64, lat2 float64, lng2 float6
 ////////////////////////////////////////////////////////////////////////////////
 
 func sendBidRPC(node types.Node, cost float64) types.BidResponse {
-	conn, err := net.DialTimeout("tcp", node.Ip, constants.BidTimeout)
+	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.BidTimeout)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return BidResponse{Response: false}
@@ -259,7 +259,7 @@ func sendBidRPC(node types.Node, cost float64) types.BidResponse {
 }
 
 func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
-	conn, err := net.DialTimeout("tcp", node.Ip, constants.BidTimeout)
+	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.BidTimeout)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return RiderInfo{Response: false}
@@ -272,27 +272,6 @@ func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
 		log.Fatal("ClientRPC.RecvDriverInfo error: ", err)
 	}
 	return *response
-}
-
-func startFailureDetector() {
-	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
-	if err != nil {
-		log.Fatal("listen error:", err)
-	}
-	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
-	failureDetectorRPC.Mu = &mu
-	failureDetectorRPC.NodeItself = &nodeItself
-	failureDetectorRPC.VirtRing = virtRing
-	failureDetectorRPC.Joined = &joined
-	failureDetectorRPC.StartPinging = &startPinging
-	rpc.Register(failureDetectorRPC)
-	conn, err := net.ListenTCP("tcp", address)
-	if err != nil {
-		log.Fatal("listen error:", err)
-	}
-	go failureDetector.SendPings(&mu, &joined, &startPinging, virtRing, myIPStr, "")
-	go failureDetector.AcceptPings(myIP, &mu, &joined)
-	go rpc.Accept(conn)
 }
 
 func acceptClusteringConnections() {
@@ -311,7 +290,5 @@ func acceptClusteringConnections() {
 }
 
 // client requests introduicer
-// client gets back cluster number and cluster represnteitnve
-// if rep: start taking join requests
-// if not rep: send req to cluster rep to join cluster
-// virtual ring with pings
+// client gets back cluster number and membership list
+// start bidding

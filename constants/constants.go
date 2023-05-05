@@ -10,7 +10,7 @@ const PingFrequency = 3 * time.Second
 
 const UDPPingAckTimeout = 2000 * time.Millisecond
 
-const NumClusters = 5
+const NumClusters = 2
 
 const ClusteringPeriod = 1 // in minutes
 
@@ -21,3 +21,7 @@ const BidTimeout = time.Second * 5 // 5 seconds
 const RiderMaxCost float64 = 100 //km
 
 const DivisorT = 1.2 //used by clustering node to find T
+
+const MaxCNs int = 10
+
+const MainClustererIp = "172.22.153.8"
