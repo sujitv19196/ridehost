@@ -290,7 +290,5 @@ func acceptClusteringConnections() {
 }
 
 // client requests introduicer
-// client gets back cluster number and cluster represnteitnve
-// if rep: start taking join requests
-// if not rep: send req to cluster rep to join cluster
-// virtual ring with pings
+// client gets back cluster number and membership list
+// start bidding

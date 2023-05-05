@@ -39,7 +39,7 @@ func (c *CoresetList) Clear() {
 }
 
 // var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
-var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
+// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
 
 // var clusteringNodes = []string{"0.0.0.0:2235", "0.0.0.0:2238", "0.0.0.0:2239"}
 
@@ -59,15 +59,19 @@ func main() {
 	for { // send request to start clustering to all nodes every ClusteringPeriod
 		time.Sleep(ClusteringPeriod * time.Minute) // TODO might want a cond var here
 		start := time.Now()
-		for _, node := range clusteringNodes {
+		mu.Lock()
+		for _, node := range virtRing.GetIPList() {
+			logger.Println("Send StartClustering Request to: ", node)
 			sendStartClusteringRPC(node)
 		}
 
 		// wait for all coresets to be recvd
 		coresetList.mu.Lock()
-		for len(coresetList.List) < len(clusteringNodes) {
+		for len(coresetList.List) < virtRing.GetSize() {
 			coresetList.cond.Wait()
 		}
+		mu.Unlock()
+
 		// take union of coresets
 		clusterNums := coresetUnion()
 		end := time.Now()
@@ -152,8 +156,10 @@ func sendClusteringRPC(request JoinRequest) {
 	// randomly chose clusteringNode to forward request to
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)
-	clusterNum := r.Intn(len(clusteringNodes))
-	conn, err := net.Dial("tcp", clusteringNodes[clusterNum])
+	mu.Lock()
+	clusterNum := r.Intn(virtRing.GetSize())
+	conn, err := net.Dial("tcp", virtRing.GetIPList()[clusterNum]+":"+strconv.Itoa(Ports["clusteringNode"]))
+	mu.Unlock()
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
