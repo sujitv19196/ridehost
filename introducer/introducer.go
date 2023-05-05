@@ -12,6 +12,8 @@ import (
 	. "ridehost/types"
 	"strconv"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 var ip net.IP
@@ -87,7 +89,7 @@ func startFailureDetector() {
 	failureDetectorRPC.Mu = mu
 	failureDetectorRPC.Cond = cond
 	failureDetectorRPC.VirtRing = virtRing
-	failureDetectorRPC.NodeItself = &Node{Ip: ipStr}
+	failureDetectorRPC.NodeItself = &Node{Uuid: uuid.New(), Ip: ipStr, NodeType: Introducer}
 	failureDetectorRPC.Joined = nil
 	// failureDetectorRPC.StartPinging = nil
 	rpc.Register(failureDetectorRPC)

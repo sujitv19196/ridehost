@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type MainClustererRPC bool
@@ -120,7 +122,7 @@ func startFailureDetector() {
 	failureDetectorRPC.Mu = mu
 	failureDetectorRPC.Cond = cond
 	failureDetectorRPC.VirtRing = virtRing
-	failureDetectorRPC.NodeItself = &Node{Ip: ipStr}
+	failureDetectorRPC.NodeItself = &Node{Uuid: uuid.New(), Ip: ipStr, NodeType: MainClusterer}
 	failureDetectorRPC.Joined = nil
 	// failureDetectorRPC.StartPinging = nil
 	rpc.Register(failureDetectorRPC)
