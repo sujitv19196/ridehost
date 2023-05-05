@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -43,6 +42,8 @@ var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clustering
 
 var coresetList CoresetList
 
+var logger = log.New(os.Stdout, "MainClusterer", log.Ldate|log.Ltime)
+
 func main() {
 	coresetList.cond = *sync.NewCond(&coresetList.mu)
 	go acceptConnections()
@@ -62,7 +63,7 @@ func main() {
 		// take union of coresets
 		clusterNums := coresetUnion()
 		end := time.Now()
-		fmt.Println("execution time of kmeans: ", end.Sub(start))
+		logger.Println("Execution time of kmeans: ", end.Sub(start))
 		// make cope list and then clear list
 		tempcorelist := coresetList.List
 		coresetList.List = nil
@@ -120,7 +121,6 @@ func sendClusteringRPC(request JoinRequest) {
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)
 	clusterNum := r.Intn(len(clusteringNodes))
-	fmt.Println("send cluster req to: ", clusteringNodes[clusterNum])
 	conn, err := net.Dial("tcp", clusteringNodes[clusterNum])
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
@@ -138,7 +138,7 @@ func sendClusteringRPC(request JoinRequest) {
 }
 
 func sendStartClusteringRPC(clusterIp string) {
-	fmt.Println("start clustering at: ", clusterIp)
+	logger.Println("Starting clustering at: ", clusterIp)
 	conn, err := net.Dial("tcp", clusterIp)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
@@ -305,8 +305,7 @@ func coresetUnion() map[Node]int {
 		coreunion[node] = parentnum
 	}
 
-	fmt.Println("clusterresult result: ", clusterresult.ClusterMaps)
-	fmt.Println("CoreUnion result: ", len(coreunion), coreunion)
+	logger.Println("CoreUnion result: ", len(coreunion), coreunion)
 
 	return coreunion
 }
@@ -327,14 +326,11 @@ func subtractnode(list1 []Node, list2 []Node) []Node {
 			unique = append(unique, num)
 		}
 	}
-
-	fmt.Println(unique) // Output: [1 3 5]
 	return unique
 }
 
 // send cluster info to client nodes
 func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
-	fmt.Println("Send cluster info to: ", node.Ip)
 	conn, err := net.Dial("tcp", node.Ip)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
@@ -343,7 +339,7 @@ func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
 	defer conn.Close()
 	client := rpc.NewClient(conn)
 	response := new(ClientClusterJoinResponse)
-	fmt.Println("Node ", clusterinfo.NodeItself.Uuid.String(), "-> Clsuter ", clusterinfo.ClusterNum, "has cluster rep: ", clusterinfo.ClusterRep.Uuid.String())
+	logger.Println("Node ", clusterinfo.NodeItself.Uuid.String(), " -> Cluster ", clusterinfo.ClusterNum, " has cluster rep: ", clusterinfo.ClusterRep.Uuid.String())
 
 	err = client.Call("ClientRPC.JoinCluster", clusterinfo, &response)
 	if err != nil {

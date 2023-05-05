@@ -43,7 +43,7 @@ func main() {
 
 	curClusteringNode = 0
 
-	go startFailureDetector()
+	startFailureDetector()
 
 	rpc.Accept(conn)
 }
@@ -57,12 +57,25 @@ func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroduc
 	return nil
 }
 
+func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
+	// take the requests of the cliient and imediately send to mainClusterer
+	if request.RequestingNode.NodeType == Driver {
+		mu.Lock()
+		virtRing.PushBack(request.RequestingNode)
+		mu.Unlock()
+	}
+	response.Message = "ACK"
+	// TODO add error?
+	return nil
+}
+
 func startFailureDetector() {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
 	virtRing = &cll.UniqueCLL{}
+	virtRing.SetDefaults()
 	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
 	failureDetectorRPC.Mu = &mu
 	failureDetectorRPC.VirtRing = virtRing
@@ -74,7 +87,7 @@ func startFailureDetector() {
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	rpc.Accept(conn)
+	go rpc.Accept(conn)
 }
 
 func forwardRequestToClusterer(request JoinRequest) {
