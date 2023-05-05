@@ -1,4 +1,4 @@
-package main
+package clusteringNode
 
 import (
 	"log"
@@ -6,8 +6,10 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"ridehost/cll"
 	"ridehost/constants"
 	. "ridehost/constants"
+	"ridehost/failureDetector"
 	. "ridehost/kMeansClustering"
 	"ridehost/types"
 	. "ridehost/types"
@@ -39,18 +41,21 @@ var numClusterNodes = 0
 var ML MembershipList
 
 // VM 2
-var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
+var mainClustererIp = constants.MainClustererIp + ":" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 // var mainClustererIp = "0.0.0.0:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
-var introducerIp string // TODO FILL!!!!!!!!!!!
-var nodeItself Node     // TODO initialize!!!!!
+var introducerIp string
+var nodeItself Node
 
 type ClusteringNodeRPC bool
 
 // VM 3, 4, 5
-// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
-var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
+// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
 
-// var clusteringNodes = []string{"0.0.0.0:2235", "0.0.0.0:2238", "0.0.0.0:2239"}
+var mu = new(sync.Mutex)
+var cond = sync.NewCond(mu)
+var virtualRing = new(cll.UniqueCLL)
+var joined = new(bool)
+var startPinging = new(bool)
 
 var clusteringNodesResponseList ResponseList
 var logger = log.New(os.Stdout, "ClusteringNode ", log.Ldate|log.Ltime)
@@ -58,12 +63,43 @@ var logger = log.New(os.Stdout, "ClusteringNode ", log.Ldate|log.Ltime)
 // accepts connections from main clusterer
 // Cluster: takes cluster request and adds to membership list
 // StartClustering: performs coreset calculation on current membership list. Locks list until done and new requests are queeue'd.
-func main() {
-	acceptConnections()
+func Start(thisNode Node, introducer string) {
+	mu.Lock()
+	virtualRing.SetDefaults()
+	nodeItself = thisNode
+	introducerIp = introducer
+	mu.Unlock()
+	go acceptConnections()
+	startFailureDetector()
 }
 
-func tellIntroducerReady() {
-	conn, err := net.Dial("tcp", introducerIp+":"+strconv.Itoa(constants.Ports["introducer"]))
+func startFailureDetector() {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
+	failureDetectorRPC.Mu = mu
+	failureDetectorRPC.Cond = cond
+	failureDetectorRPC.NodeItself = &nodeItself
+	failureDetectorRPC.VirtRing = virtualRing
+	*joined = true
+	failureDetectorRPC.Joined = joined
+	// failureDetectorRPC.StartPinging = startPinging
+	rpc.Register(failureDetectorRPC)
+	conn, err := net.ListenTCP("tcp", address)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	tellIntroducerFDReady()
+	go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, []string{introducerIp, constants.MainClustererIp}, nodeItself.Uuid.String())
+	go failureDetector.AcceptPings(net.ParseIP(nodeItself.Ip), mu, joined)
+	tellIntroducerFDPingingReady()
+	rpc.Accept(conn)
+}
+
+func tellIntroducerFDPingingReady() {
+	conn, err := net.Dial("tcp", introducerIp+":"+strconv.Itoa(constants.Ports["failureDetector"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
@@ -71,12 +107,51 @@ func tellIntroducerReady() {
 	defer conn.Close()
 
 	client := rpc.NewClient(conn)
-	response := new(types.ClientIntroducerResponse)
-	err = client.Call("IntroducerRPC.CNReady", ClientReadyRequest{RequestingNode: nodeItself}, &response)
+	response := new(types.NodeFailureDetectingPingingStatusRes)
+	nodeItself.PingReady = true
+	virtualRing.GetNode(nodeItself.Uuid.String()).PingReady = true
+	err = client.Call("FailureDetectorRPC.IntroducerStartPingingNode", NodeFailureDetectingPingingStatusReq{Uuid: nodeItself.Uuid.String(), Ip: nodeItself.Ip, Status: true}, &response)
 	if err != nil {
-		log.Fatal("IntroducerRPC.CNReady error: ", err)
+		log.Fatal("FailureDetectorRPC.IntroducerStartPingingNode error: ", err)
 	}
 }
+
+func tellIntroducerFDReady() {
+	conn, err := net.Dial("tcp", introducerIp+":"+strconv.Itoa(constants.Ports["failureDetector"]))
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+	defer conn.Close()
+
+	client := rpc.NewClient(conn)
+	response := new(types.IntroducerNodeAddResponse)
+	err = client.Call("FailureDetectorRPC.IntroducerAddNode", IntroducerNodeAddRequest{NodeToAdd: nodeItself}, &response)
+	if err != nil {
+		log.Fatal("FailureDetectorRPC.IntroducerAddNode error: ", err)
+	}
+	log.Println("Tell Introdcuer FDR Ready")
+	for _, node := range response.Members {
+		virtualRing.PushBack(node)
+	}
+}
+
+// sends RPC to introdcuer to indicate that it is ready to recv clustering requests
+// func tellIntroducerReady() {
+// 	conn, err := net.Dial("tcp", introducerIp+":"+strconv.Itoa(constants.Ports["introducer"]))
+// 	if err != nil {
+// 		os.Stderr.WriteString(err.Error() + "\n")
+// 		os.Exit(1)
+// 	}
+// 	defer conn.Close()
+
+// 	client := rpc.NewClient(conn)
+// 	response := new(types.ClientIntroducerResponse)
+// 	err = client.Call("IntroducerRPC.CNReady", ClientReadyRequest{RequestingNode: nodeItself}, &response)
+// 	if err != nil {
+// 		log.Fatal("IntroducerRPC.CNReady error: ", err)
+// 	}
+// }
 
 func acceptConnections() {
 	// get this machine's IP address
@@ -91,7 +166,7 @@ func acceptConnections() {
 		log.Fatal("listen error:", err)
 	}
 	defer conn.Close()
-	tellIntroducerReady()
+	// tellIntroducerReady()
 	rpc.Accept(conn)
 }
 
@@ -119,13 +194,16 @@ func (c *ClusteringNodeRPC) StartClustering(nouse int, response *MainClustererCl
 			// clear list after clutsering
 			ML.List = nil
 		} else { // call send CostMsg so that other clustering nodes stop waiting
-			// add := []string{"0.0.0.0:2235"}
 			add, _ := net.LookupIP("ispycode.com")
-			for _, node := range clusteringNodes {
-				if node != add[0].String() {
-					go sendCostMsg(node, 0.0, 0)
+
+			mu.Lock()
+			for _, node := range virtualRing.GetNodes(false) {
+				nodeIP := node.Ip
+				if nodeIP != add[0].String() {
+					go sendCostMsg(nodeIP, 0.0, 0)
 				}
 			}
+			mu.Unlock()
 		}
 
 		ML.mu.Unlock()
@@ -192,7 +270,7 @@ func (m *ClusteringNodeRPC) RecvCostMsg(data CostMsg, response *ClusteringNodeCl
 
 // calls ClusteringNodes.RecvCostMsg to give it computed cost and length of membershiplist
 func sendCostMsg(nodeIP string, cost float64, length int) {
-	conn, err := net.Dial("tcp", nodeIP)
+	conn, err := net.Dial("tcp", nodeIP+":"+strconv.Itoa(Ports["clusteringNode"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
@@ -247,17 +325,22 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	add, _ := net.LookupIP("ispycode.com")
 	// add := []string{"0.0.0.0:2235"}
 	currMLLen := len(ML.List)
-	for _, node := range clusteringNodes {
-		if node != add[0].String() {
-			go sendCostMsg(node, cost, currMLLen)
+	mu.Lock()
+	for _, node := range virtualRing.GetNodes(false) {
+		nodeIP := node.Ip
+		if nodeIP != add[0].String() {
+			go sendCostMsg(nodeIP, cost, currMLLen)
 		}
 	}
+	mu.Unlock()
 	clusteringNodesResponseList.cond = *sync.NewCond(&clusteringNodesResponseList.mu)
 	// wait for all responses to be recvd
 	clusteringNodesResponseList.mu.Lock()
-	for len(clusteringNodesResponseList.List) < len(clusteringNodes)-1 {
+	mu.Lock()
+	for len(clusteringNodesResponseList.List) < virtualRing.GetSize()-1 {
 		clusteringNodesResponseList.cond.Wait()
 	}
+	mu.Unlock()
 
 	// as a result from step 3
 	tempclusteringNodesResponseList := clusteringNodesResponseList.List

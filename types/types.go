@@ -1,22 +1,27 @@
 package types
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 const (
-	Driver  int = 0
-	Rider   int = 1
-	Cluster int = 2
+	Driver        int = 0
+	Rider         int = 1
+	Stationary    int = 2
+	Introducer    int = 3
+	MainClusterer int = 4
 )
 
 type Node struct {
-	NodeType int
-	Ip       string
-	Uuid     uuid.UUID
-	StartLat float64
-	StartLng float64
-	DestLat  float64
-	DestLng  float64
-	Cost     float64
+	NodeType  int
+	Ip        string
+	Uuid      uuid.UUID
+	StartLat  float64
+	StartLng  float64
+	DestLat   float64
+	DestLng   float64
+	Cost      float64
+	PingReady bool
 }
 
 type JoinRequest struct {
@@ -25,8 +30,9 @@ type JoinRequest struct {
 }
 
 type ClientIntroducerResponse struct {
-	Message string
-	Error   error
+	Message          string
+	Error            error
+	IsClusteringNode bool
 }
 
 type AckErrResponse struct {
@@ -104,9 +110,24 @@ type ClientClusterPingingStatusResponse struct {
 }
 
 type ClusterNodeRemovalRequest struct {
-	NodeIP string
+	NodeUuid string
 }
 
+type IntroducerNodeAddRequest struct {
+	NodeToAdd Node
+}
+
+type IntroducerNodeAddResponse struct {
+	Members []Node
+}
+
+type ClusterNodeAddRequest struct {
+	NodeToAdd Node
+}
+
+type ClusterNodeAddResponse struct {
+	Ack bool
+}
 type ClusterNodeRemovalResponse struct {
 	Ack bool
 }
@@ -127,4 +148,15 @@ type DriverInfo struct {
 type RiderInfo struct {
 	Response    bool
 	PhoneNumber string
+}
+
+type NodeFailureDetectingPingingStatusReq struct {
+	Uuid   string
+	Ip     string
+	Status bool
+}
+
+type NodeFailureDetectingPingingStatusRes struct {
+	Message string
+	Error   error
 }

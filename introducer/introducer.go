@@ -12,9 +12,12 @@ import (
 	. "ridehost/types"
 	"strconv"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 var ip net.IP
+var ipStr string = getMyIpStr()
 
 // VM 2
 var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
@@ -22,8 +25,9 @@ var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // 
 
 type IntroducerRPC bool
 
-var mu sync.Mutex
-var virtRing *cll.UniqueCLL
+var mu = new(sync.Mutex)
+var cond = sync.NewCond(mu)
+var virtRing = new(cll.UniqueCLL)
 var curClusteringNode int
 
 func main() {
@@ -39,8 +43,6 @@ func main() {
 		log.Fatal("listen error:", err)
 	}
 
-	mu = sync.Mutex{}
-
 	curClusteringNode = 0
 
 	startFailureDetector()
@@ -53,35 +55,43 @@ func (i *IntroducerRPC) ClientJoin(request JoinRequest, response *ClientIntroduc
 	// take the requests of the cliient and imediately send to mainClusterer
 	go forwardRequestToClusterer(request)
 	response.Message = "ACK"
+	response.IsClusteringNode = false
 	// TODO add error?
+	mu.Lock()
+	if virtRing.GetSize() < MaxCNs && request.NodeRequest.NodeType == Driver {
+		response.IsClusteringNode = true
+	}
+	mu.Unlock()
 	return nil
 }
 
-func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
-	// take the requests of the cliient and imediately send to mainClusterer
-	if request.RequestingNode.NodeType == Driver {
-		mu.Lock()
-		virtRing.PushBack(request.RequestingNode)
-		mu.Unlock()
-	}
-	response.Message = "ACK"
-	// TODO add error?
-	return nil
-}
+// RPC that client calls to let Introducer know it is ready to recv clsutering requests
+// func (i *IntroducerRPC) CNReady(request ClientReadyRequest, response *ClientIntroducerResponse) error {
+// 	mu.Lock()
+// 	virtRing.PushBack(request.RequestingNode)
+// 	mu.Unlock()
+// 	response.Message = "ACK"
+// 	response.IsClusteringNode = true
+// 	log.Println(request.RequestingNode.Uuid.String(), " added to CN pool")
+// 	return nil
+// }
 
 func startFailureDetector() {
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	virtRing = &cll.UniqueCLL{}
+
+	mu.Lock()
 	virtRing.SetDefaults()
+	mu.Unlock()
 	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
-	failureDetectorRPC.Mu = &mu
+	failureDetectorRPC.Mu = mu
+	failureDetectorRPC.Cond = cond
 	failureDetectorRPC.VirtRing = virtRing
-	failureDetectorRPC.NodeItself = nil
+	failureDetectorRPC.NodeItself = &Node{Uuid: uuid.New(), Ip: ipStr, NodeType: Introducer}
 	failureDetectorRPC.Joined = nil
-	failureDetectorRPC.StartPinging = nil
+	// failureDetectorRPC.StartPinging = nil
 	rpc.Register(failureDetectorRPC)
 	conn, err := net.ListenTCP("tcp", address)
 	if err != nil {
@@ -92,12 +102,16 @@ func startFailureDetector() {
 
 func forwardRequestToClusterer(request JoinRequest) {
 	mu.Lock()
+	for virtRing.GetSize() <= 0 {
+		cond.Wait()
+	}
 	clustererList := virtRing.GetNodes(false)
 	curClusteringNode = curClusteringNode % len(clustererList)
 	clustererIP := clustererList[curClusteringNode].Ip
 	curClusteringNode = (curClusteringNode + 1) % len(clustererList)
 	mu.Unlock()
-	conn, err := net.Dial("tcp", clustererIP+strconv.Itoa(constants.Ports["clusteringNode"]))
+
+	conn, err := net.Dial("tcp", clustererIP+":"+strconv.Itoa(constants.Ports["clusteringNode"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
@@ -108,6 +122,7 @@ func forwardRequestToClusterer(request JoinRequest) {
 	if err != nil {
 		os.Stderr.WriteString("ClusteringNodeRPC.Cluster error: " + err.Error())
 	}
+	log.Println("Forward request: ", request.NodeRequest.Uuid.String())
 }
 
 func forwardRequestToMainClusterer(request JoinRequest) {
@@ -122,4 +137,16 @@ func forwardRequestToMainClusterer(request JoinRequest) {
 	if err != nil {
 		os.Stderr.WriteString("MainClustererRPC.ClusteringRequest error: " + err.Error())
 	}
+}
+
+// get this machine's IP address
+func getMyIpStr() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+	defer conn.Close()
+	myIP := conn.LocalAddr().(*net.UDPAddr).IP
+	return myIP.String()
 }

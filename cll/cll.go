@@ -59,6 +59,14 @@ func (L *UniqueCLL) GetHead() string {
 	return L.head.key
 }
 
+func (L *UniqueCLL) GetNode(uuid string) *types.Node {
+	node, pres := L.pos_map[uuid]
+	if pres {
+		return &node.nodeinfo
+	}
+	return nil
+}
+
 func (L *UniqueCLL) PushBack(node types.Node) {
 	// L.mu.Lock()
 	// defer L.mu.Unlock()
@@ -118,23 +126,23 @@ func (L *UniqueCLL) RemoveNode(key string) {
 }
 
 // Gets next and previous element
-func (L *UniqueCLL) GetNeighbors(key string) []string {
+func (L *UniqueCLL) GetNeighbors(key string) []types.Node {
 	// L.mu.Lock()
-	var machine_ids []string
+	var machines []types.Node
 	curr_node, pres := L.pos_map[key]
 	if !pres {
 		// L.mu.Unlock()
 		fmt.Printf("[GetNeighbors] id: %s not found\n", key)
-		return machine_ids
+		return machines
 	}
 	if L.size == 2 {
-		machine_ids = append(machine_ids, curr_node.next.key)
+		machines = append(machines, curr_node.next.nodeinfo)
 	} else if L.size > 2 {
-		machine_ids = append(machine_ids, curr_node.prev.key)
-		machine_ids = append(machine_ids, curr_node.next.key)
+		machines = append(machines, curr_node.prev.nodeinfo)
+		machines = append(machines, curr_node.next.nodeinfo)
 	}
 	// L.mu.Unlock()
-	return machine_ids
+	return machines
 }
 
 // returns list of node IPs for each node in the ring

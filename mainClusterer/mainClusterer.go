@@ -6,12 +6,17 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"ridehost/cll"
+	"ridehost/constants"
 	. "ridehost/constants"
+	"ridehost/failureDetector"
 	. "ridehost/kMeansClustering"
 	. "ridehost/types"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type MainClustererRPC bool
@@ -36,7 +41,7 @@ func (c *CoresetList) Clear() {
 }
 
 // var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"])}
-var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
+// var clusteringNodes = []string{"172.22.155.51:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.157.57:" + strconv.Itoa(Ports["clusteringNode"]), "172.22.150.239:" + strconv.Itoa(Ports["clusteringNode"])}
 
 // var clusteringNodes = []string{"0.0.0.0:2235", "0.0.0.0:2238", "0.0.0.0:2239"}
 
@@ -44,22 +49,32 @@ var coresetList CoresetList
 
 var logger = log.New(os.Stdout, "MainClusterer", log.Ldate|log.Ltime)
 
+var ipStr string = getMyIpStr()
+
+var mu = new(sync.Mutex)
+var cond = sync.NewCond(mu)
+var virtRing = new(cll.UniqueCLL)
+
 func main() {
 	coresetList.cond = *sync.NewCond(&coresetList.mu)
 	go acceptConnections()
+	go startFailureDetector()
 
 	for { // send request to start clustering to all nodes every ClusteringPeriod
 		time.Sleep(ClusteringPeriod * time.Minute) // TODO might want a cond var here
 		start := time.Now()
-		for _, node := range clusteringNodes {
-			sendStartClusteringRPC(node)
+		mu.Lock()
+		for _, node := range virtRing.GetIPList() {
+			go sendStartClusteringRPC(node + ":" + strconv.Itoa(Ports["clusteringNode"]))
 		}
 
 		// wait for all coresets to be recvd
 		coresetList.mu.Lock()
-		for len(coresetList.List) < len(clusteringNodes) {
+		for len(coresetList.List) < virtRing.GetSize() {
 			coresetList.cond.Wait()
 		}
+		mu.Unlock()
+
 		// take union of coresets
 		clusterNums := coresetUnion()
 		end := time.Now()
@@ -94,6 +109,30 @@ func main() {
 	}
 }
 
+func startFailureDetector() {
+	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(constants.Ports["failureDetector"]))
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+
+	mu.Lock()
+	virtRing.SetDefaults()
+	mu.Unlock()
+	failureDetectorRPC := new(failureDetector.FailureDetectorRPC)
+	failureDetectorRPC.Mu = mu
+	failureDetectorRPC.Cond = cond
+	failureDetectorRPC.VirtRing = virtRing
+	failureDetectorRPC.NodeItself = &Node{Uuid: uuid.New(), Ip: ipStr, NodeType: MainClusterer}
+	failureDetectorRPC.Joined = nil
+	// failureDetectorRPC.StartPinging = nil
+	rpc.Register(failureDetectorRPC)
+	conn, err := net.ListenTCP("tcp", address)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	rpc.Accept(conn)
+}
+
 func acceptConnections() {
 	// get my ip
 	address, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(Ports["mainClusterer"]))
@@ -120,8 +159,10 @@ func sendClusteringRPC(request JoinRequest) {
 	// randomly chose clusteringNode to forward request to
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)
-	clusterNum := r.Intn(len(clusteringNodes))
-	conn, err := net.Dial("tcp", clusteringNodes[clusterNum])
+	mu.Lock()
+	clusterNum := r.Intn(virtRing.GetSize())
+	conn, err := net.Dial("tcp", virtRing.GetIPList()[clusterNum]+":"+strconv.Itoa(Ports["clusteringNode"]))
+	mu.Unlock()
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
@@ -331,7 +372,7 @@ func subtractnode(list1 []Node, list2 []Node) []Node {
 
 // send cluster info to client nodes
 func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
-	conn, err := net.Dial("tcp", node.Ip)
+	conn, err := net.Dial("tcp", node.Ip+":"+strconv.Itoa(constants.Ports["clientRPC"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
@@ -345,4 +386,16 @@ func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
 	if err != nil {
 		os.Stderr.WriteString("ClientRPC.ClientJoin error: " + err.Error())
 	}
+}
+
+// get this machine's IP address
+func getMyIpStr() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+	defer conn.Close()
+	myIP := conn.LocalAddr().(*net.UDPAddr).IP
+	return myIP.String()
 }
