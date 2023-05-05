@@ -356,6 +356,7 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	t = t + len(ML.List) //add the length of ML of the node itself.
 	logger.Println("value of t from all clustering nodes: ", t)
 	T := int(float64(t) / DivisorT)
+	logger.Println("value of T : ", T)
 	logger.Println("costFromAllClusteringNodes: ", costFromAllClusteringNodes)
 	sumOfCostOfAllClusteringNodes := 0.
 
@@ -369,7 +370,10 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	if ti == 0 {
 		ti = 1
 	} else if ti >= currMLLen {
-		ti = currMLLen - 1
+		ti = currMLLen - NumClusters - 2
+		if ti == 0 {
+			ti = 1
+		}
 	}
 	logger.Println("updated value of ti : ", ti)
 	// ti = 4

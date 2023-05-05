@@ -94,7 +94,7 @@ func main() {
 	mu.Unlock()
 
 	riderAuctionState = RiderAuctionState{mu: sync.Mutex{}, acceptedBid: false}
-	// acceptClusteringConnections()
+	acceptClusteringConnections()
 }
 
 // command called by a client to join the system

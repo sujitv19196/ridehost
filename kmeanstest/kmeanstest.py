@@ -1,5 +1,6 @@
 import pandas as pd
 import random
+import math
 import subprocess
 from multiprocessing import Pool
 
@@ -69,7 +70,8 @@ def generate_chicago_points():
         start_lon = row["Pickup Centroid Longitude"]
         dest_lat = row["Dropoff Centroid Latitude"]
         dest_lon = row["Dropoff Centroid Longitude"]
-        some_points.append((start_lat, start_lon, dest_lat, dest_lon))
+        if((not math.isnan(start_lat)) & (not math.isnan(start_lon)) & (not math.isnan(dest_lat)) & (not math.isnan(dest_lon))):    
+            some_points.append((start_lat, start_lon, dest_lat, dest_lon))
 
     return some_points
     
@@ -107,5 +109,5 @@ if __name__ == '__main__':
     coords = generate_chicago_points()
     print("Number of coordinates",len(coords))
     print(coords[0], coords[1])
-
-    # run_executable("client/client", coords)
+    print(coords)
+    run_executable("client/client", coords)

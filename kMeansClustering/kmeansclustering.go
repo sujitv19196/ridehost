@@ -52,8 +52,8 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 		min_dis := 96789056.0
 		for _, obs := range c.Observations {
 			p := Point{X: obs.Coordinates()[0], Y: obs.Coordinates()[1]}
-			logger.Println("data : ", data)
-			logger.Println("p : ", p)
+			// logger.Println("data : ", data)
+			// logger.Println("p : ", p)
 			idxOfPoint = slices.Index(data, p)
 			cur_dis := euclideanDistance(p, centerPoint)
 			if cur_dis < min_dis {
