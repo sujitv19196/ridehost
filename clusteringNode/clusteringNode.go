@@ -92,8 +92,8 @@ func startFailureDetector() {
 		log.Fatal("listen error:", err)
 	}
 	tellIntroducerFDReady()
-	// go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, []string{introducerIp, constants.MainClustererIp}, nodeItself.Uuid.String())
-	// go failureDetector.AcceptPings(net.ParseIP(nodeItself.Ip), mu, joined)
+	go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, []string{introducerIp, constants.MainClustererIp}, nodeItself.Uuid.String())
+	go failureDetector.AcceptPings(net.ParseIP(nodeItself.Ip), mu, joined)
 	tellIntroducerFDPingingReady()
 	rpc.Accept(conn)
 }
@@ -110,9 +110,9 @@ func tellIntroducerFDPingingReady() {
 	response := new(types.NodeFailureDetectingPingingStatusRes)
 	nodeItself.PingReady = true
 	virtualRing.GetNode(nodeItself.Uuid.String()).PingReady = true
-	err = client.Call("FailureDetectorRPC.StartPingingNode", NodeFailureDetectingPingingStatusReq{Uuid: nodeItself.Uuid.String(), Ip: nodeItself.Ip, Status: true}, &response)
+	err = client.Call("FailureDetectorRPC.IntroducerStartPingingNode", NodeFailureDetectingPingingStatusReq{Uuid: nodeItself.Uuid.String(), Ip: nodeItself.Ip, Status: true}, &response)
 	if err != nil {
-		log.Fatal("FailureDetectorRPC.StartPingingNode error: ", err)
+		log.Fatal("FailureDetectorRPC.IntroducerStartPingingNode error: ", err)
 	}
 }
 
