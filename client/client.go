@@ -242,7 +242,7 @@ func distanceBetweenCoords(lat1 float64, lng1 float64, lat2 float64, lng2 float6
 ////////////////////////////////////////////////////////////////////////////////
 
 func sendBidRPC(node types.Node, cost float64) types.BidResponse {
-	conn, err := net.DialTimeout("tcp", node.Ip, constants.BidTimeout)
+	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.BidTimeout)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return BidResponse{Response: false}
@@ -259,7 +259,7 @@ func sendBidRPC(node types.Node, cost float64) types.BidResponse {
 }
 
 func sendDriveInfo(node Node, driverInfo DriverInfo) RiderInfo {
-	conn, err := net.DialTimeout("tcp", node.Ip, constants.BidTimeout)
+	conn, err := net.DialTimeout("tcp", node.Ip+":"+strconv.Itoa(constants.Ports["clientRPC"]), constants.BidTimeout)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return RiderInfo{Response: false}
@@ -290,7 +290,5 @@ func acceptClusteringConnections() {
 }
 
 // client requests introduicer
-// client gets back cluster number and cluster represnteitnve
-// if rep: start taking join requests
-// if not rep: send req to cluster rep to join cluster
-// virtual ring with pings
+// client gets back cluster number and membership list
+// start bidding

@@ -5,9 +5,11 @@ import (
 )
 
 const (
-	Driver  int = 0
-	Rider   int = 1
-	Cluster int = 2
+	Driver        int = 0
+	Rider         int = 1
+	Stationary    int = 2
+	Introducer    int = 3
+	MainClusterer int = 4
 )
 
 type Node struct {
