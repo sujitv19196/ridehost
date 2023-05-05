@@ -41,7 +41,7 @@ var numClusterNodes = 0
 var ML MembershipList
 
 // VM 2
-var mainClustererIp = constants.MainClustererIp + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
+var mainClustererIp = constants.MainClustererIp + ":" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 // var mainClustererIp = "0.0.0.0:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
 var introducerIp string
 var nodeItself Node
@@ -268,7 +268,7 @@ func (m *ClusteringNodeRPC) RecvCostMsg(data CostMsg, response *ClusteringNodeCl
 
 // calls ClusteringNodes.RecvCostMsg to give it computed cost and length of membershiplist
 func sendCostMsg(nodeIP string, cost float64, length int) {
-	conn, err := net.Dial("tcp", nodeIP)
+	conn, err := net.Dial("tcp", nodeIP+":"+strconv.Itoa(Ports["clusteringNode"]))
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
