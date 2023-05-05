@@ -47,6 +47,8 @@ var coresetList CoresetList
 
 var logger = log.New(os.Stdout, "MainClusterer", log.Ldate|log.Ltime)
 
+var ipStr string = getMyIpStr()
+
 var mu = new(sync.Mutex)
 var cond = sync.NewCond(mu)
 var virtRing = new(cll.UniqueCLL)
@@ -118,7 +120,7 @@ func startFailureDetector() {
 	failureDetectorRPC.Mu = mu
 	failureDetectorRPC.Cond = cond
 	failureDetectorRPC.VirtRing = virtRing
-	failureDetectorRPC.NodeItself = nil
+	failureDetectorRPC.NodeItself = &Node{Ip: ipStr}
 	failureDetectorRPC.Joined = nil
 	// failureDetectorRPC.StartPinging = nil
 	rpc.Register(failureDetectorRPC)
@@ -382,4 +384,16 @@ func sendClusterInfo(node Node, clusterinfo ClientClusterJoinRequest) {
 	if err != nil {
 		os.Stderr.WriteString("ClientRPC.ClientJoin error: " + err.Error())
 	}
+}
+
+// get this machine's IP address
+func getMyIpStr() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+	defer conn.Close()
+	myIP := conn.LocalAddr().(*net.UDPAddr).IP
+	return myIP.String()
 }

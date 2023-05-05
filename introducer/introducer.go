@@ -15,7 +15,7 @@ import (
 )
 
 var ip net.IP
-var ipStr string
+var ipStr string = getMyIpStr()
 
 // VM 2
 var mainClustererIp = "172.22.153.8:" + strconv.Itoa(Ports["mainClusterer"]) // TODO can hard code for now
@@ -43,7 +43,6 @@ func main() {
 
 	curClusteringNode = 0
 
-	ipStr = getMyIpStr()
 	startFailureDetector()
 
 	rpc.Accept(conn)
