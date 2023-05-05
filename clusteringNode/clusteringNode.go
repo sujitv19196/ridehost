@@ -92,8 +92,8 @@ func startFailureDetector() {
 		log.Fatal("listen error:", err)
 	}
 	tellIntroducerFDReady()
-	go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, []string{introducerIp, constants.MainClustererIp}, nodeItself.Uuid.String())
-	go failureDetector.AcceptPings(net.ParseIP(nodeItself.Ip), mu, joined)
+	// go failureDetector.SendPings(mu, joined, virtualRing, nodeItself.Ip, []string{introducerIp, constants.MainClustererIp}, nodeItself.Uuid.String())
+	// go failureDetector.AcceptPings(net.ParseIP(nodeItself.Ip), mu, joined)
 	tellIntroducerFDPingingReady()
 	rpc.Accept(conn)
 }
