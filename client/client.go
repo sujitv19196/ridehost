@@ -157,6 +157,7 @@ func (c *ClientRPC) RecvBid(bid Bid, response *BidResponse) error {
 
 	if bid.Cost < RiderMaxCost { // if bid is within ddrivere price range
 		response.Accept = true
+		riderAuctionState.acceptedBid = true
 		log.Println("Bid Accepted, cost: ", bid.Cost)
 	} else {
 		response.Accept = false
