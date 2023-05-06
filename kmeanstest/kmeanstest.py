@@ -39,29 +39,29 @@ def generate_chicago_points():
     df['Dropoff Centroid Latitude'] = df['Dropoff Centroid Latitude'].astype(float)
     df['Dropoff Centroid Longitude'] = df['Dropoff Centroid Longitude'].astype(float)
 
-    df['start_date'] = df['Trip Start Timestamp'].apply(lambda x: x.date())
+    # df['start_date'] = df['Trip Start Timestamp'].apply(lambda x: x.date())
     
-    counts = df.groupby('start_date')[['start_date']].count()
-    counts_df = pd.DataFrame(counts)
-    counts_df.columns = ["count of rides"]
-    counts_df = counts_df.reset_index()
-    counts_df.columns = ["start_date", "count_of_rides"]
-    print("Average count of rides per day for month of March : ")
-    print(counts_df["count_of_rides"].sum(), len(counts_df), counts_df["count_of_rides"].sum()/(len(counts_df)))
+    # counts = df.groupby('start_date')[['start_date']].count()
+    # counts_df = pd.DataFrame(counts)
+    # counts_df.columns = ["count of rides"]
+    # counts_df = counts_df.reset_index()
+    # counts_df.columns = ["start_date", "count_of_rides"]
+    # print("Average count of rides per day for month of March : ")
+    # print(counts_df["count_of_rides"].sum(), len(counts_df), counts_df["count_of_rides"].sum()/(len(counts_df)))
     
-    df['start_date_with_hr'] = pd.to_datetime(df['start_date'])
-    df['hr'] = df["Trip Start Timestamp"].apply(lambda x: x.hour)
-    df['start_date_with_hr'] = df[['start_date_with_hr', 'hr']].apply(lambda x: x['start_date_with_hr']+pd.DateOffset(hours=x['hr']), axis=1)  
-    counts = df.groupby('start_date_with_hr')[['start_date_with_hr']].count()
-    counts_df = pd.DataFrame(counts)
-    counts_df.columns = ["count of rides"]
-    counts_df = counts_df.reset_index()
-    counts_df.columns = ["start_date_with_hr", "count_of_rides"]
-    print("Average count of rides per hour for month of March : ")
-    print(counts_df["count_of_rides"].sum(), len(counts_df), counts_df["count_of_rides"].sum()/(len(counts_df)))
-    print("Count of rides in the busiest hour for month of March : ")
-    max_count_hr_date = counts_df["count_of_rides"].max()
-    print(max_count_hr_date, counts_df[counts_df["count_of_rides"]==max_count_hr_date]["start_date_with_hr"])
+    # df['start_date_with_hr'] = pd.to_datetime(df['start_date'])
+    # df['hr'] = df["Trip Start Timestamp"].apply(lambda x: x.hour)
+    # df['start_date_with_hr'] = df[['start_date_with_hr', 'hr']].apply(lambda x: x['start_date_with_hr']+pd.DateOffset(hours=x['hr']), axis=1)  
+    # counts = df.groupby('start_date_with_hr')[['start_date_with_hr']].count()
+    # counts_df = pd.DataFrame(counts)
+    # counts_df.columns = ["count of rides"]
+    # counts_df = counts_df.reset_index()
+    # counts_df.columns = ["start_date_with_hr", "count_of_rides"]
+    # print("Average count of rides per hour for month of March : ")
+    # print(counts_df["count_of_rides"].sum(), len(counts_df), counts_df["count_of_rides"].sum()/(len(counts_df)))
+    # print("Count of rides in the busiest hour for month of March : ")
+    # max_count_hr_date = counts_df["count_of_rides"].max()
+    # print(max_count_hr_date, counts_df[counts_df["count_of_rides"]==max_count_hr_date]["start_date_with_hr"])
 
 
     some_points = []
@@ -109,5 +109,4 @@ if __name__ == '__main__':
     coords = generate_chicago_points()
     print("Number of coordinates",len(coords))
     print(coords[0], coords[1])
-    print(coords)
     run_executable("client/client", coords)
