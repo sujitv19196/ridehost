@@ -367,11 +367,11 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	// Round 2 step 1 : Compute ti
 	ti := int(math.Floor((float64(T) * cost) / sumOfCostOfAllClusteringNodes))
 	logger.Println("value of ti : ", ti)
-	if ti == 0 {
+	if ti <= 0 {
 		ti = 1
-	} else if ti >= currMLLen {
+	} else if ti > currMLLen-NumClusters-2 {
 		ti = currMLLen - NumClusters - 2
-		if ti == 0 {
+		if ti <= 0 {
 			ti = 1
 		}
 	}
