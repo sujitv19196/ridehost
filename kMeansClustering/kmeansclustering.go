@@ -91,7 +91,7 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	}
 	// fmt.Println("centroids", centroids)
 	// fmt.Println("pointclusters", pointclusters)
-	logger.Println("clusterMaps : ", clusterMaps)
+	// logger.Println("clusterMaps : ", clusterMaps)
 	clusterresult := ClusterResult{}
 	clusterresult.Centroids = centroids
 	clusterresult.Clusters = pointclusters
