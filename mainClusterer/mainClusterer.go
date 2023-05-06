@@ -324,8 +324,11 @@ func coresetUnion() map[Node]int {
 			}
 		}
 	}
+	logger.Println("length of allnodes: ", len(allnodes))
+	logger.Println("length of coresetnodes: ", len(coresetnodes))
 	restnodes := subtractnode(allnodes, coresetnodes)
-
+	// restnodes := subtractnode(dedupeList(allnodes), coresetnodes)
+	logger.Println("length of restnodes: ", len(restnodes))
 	clusterresult := ClusterResult{}
 	clusterresult = CentralizedKMeansClustering(coresetnodes, NumClusters)
 	num := 0
@@ -351,6 +354,18 @@ func coresetUnion() map[Node]int {
 	return coreunion
 }
 
+// func dedupeList(list []Node) []Node {
+// 	deduped := make([]Node, 0, len(list))
+// 	seen := make(map[Node]bool)
+
+//		for _, item := range list {
+//			if !seen[item] {
+//				deduped = append(deduped, item)
+//				seen[item] = true
+//			}
+//		}
+//		return deduped
+//	}
 func subtractnode(list1 []Node, list2 []Node) []Node {
 	// Input lists
 

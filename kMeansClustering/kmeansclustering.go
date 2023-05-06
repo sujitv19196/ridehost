@@ -1,15 +1,17 @@
 package kMeansClustering
 
 import (
-	"fmt"
+	"log"
 	"math"
+	"os"
 	. "ridehost/types"
 
 	"github.com/muesli/clusters"
 	"github.com/muesli/kmeans"
-	"golang.org/x/exp/slices"
 	// "github.com/biogo/cluster/kmeans"
 )
+
+var logger = log.New(os.Stdout, "ClusteringNode-kmeansclustering ", log.Ldate|log.Ltime)
 
 func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	data := []Point{}
@@ -37,19 +39,38 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	clusterMaps := map[Node][]Node{}
 	centerPointList := []Point{}
 	centerPointNodeList := []Node{}
-	fmt.Println("err if any: ", err)
+	logger.Println("err if any: ", err)
 	for _, c := range clusters {
 		temp := []Point{}
 		clusterList := []Node{}
-		centerPoint := Point{c.Center[0], c.Center[1]}
+		centerPoint := Point{X: c.Center[0], Y: c.Center[1]}
 		nearestPointToCenterIdx := 0
-		nearestPointToCenter := Point{0, 0}
+		nearestPointToCenter := Point{X: 0, Y: 0}
 		pointnode := Node{}
 		idxOfPoint := 0
-		min_dis := 96789056.0
+		min_dis := 999999999.0
+		indexes_visited := make(map[int]int, len(data))
+		for i := 0; i < len(data); i++ {
+			indexes_visited[i] = 0
+		}
 		for _, obs := range c.Observations {
-			p := Point{obs.Coordinates()[0], obs.Coordinates()[1]}
-			idxOfPoint = slices.Index(data, p)
+			p := Point{X: obs.Coordinates()[0], Y: obs.Coordinates()[1]}
+			// logger.Println("data : ", data)
+			// logger.Println("p : ", p)
+			// indexes := make([]int, 0)
+			for i, v := range data {
+				if v == p {
+					// indexes = append(indexes, i)
+					if indexes_visited[i] == 0 {
+						idxOfPoint = i
+						indexes_visited[i] = 1
+						break
+					}
+
+				}
+			}
+
+			// idxOfPoint = slices.Index(data, p)
 			cur_dis := euclideanDistance(p, centerPoint)
 			if cur_dis < min_dis {
 				min_dis = cur_dis
@@ -66,10 +87,11 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 		centerPointNodeList = append(centerPointNodeList, nearestPointNodeToCenter)
 		clusterMaps[nearestPointNodeToCenter] = clusterList
 		pointclusters = append(pointclusters, temp)
-		centroids = append(centroids, Point{c.Center[0], c.Center[1]})
+		centroids = append(centroids, Point{X: c.Center[0], Y: c.Center[1]})
 	}
 	// fmt.Println("centroids", centroids)
 	// fmt.Println("pointclusters", pointclusters)
+	// logger.Println("clusterMaps : ", clusterMaps)
 	clusterresult := ClusterResult{}
 	clusterresult.Centroids = centroids
 	clusterresult.Clusters = pointclusters

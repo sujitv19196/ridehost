@@ -356,6 +356,7 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	t = t + len(ML.List) //add the length of ML of the node itself.
 	logger.Println("value of t from all clustering nodes: ", t)
 	T := int(float64(t) / DivisorT)
+	logger.Println("value of T : ", T)
 	logger.Println("costFromAllClusteringNodes: ", costFromAllClusteringNodes)
 	sumOfCostOfAllClusteringNodes := 0.
 
@@ -366,10 +367,13 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	// Round 2 step 1 : Compute ti
 	ti := int(math.Floor((float64(T) * cost) / sumOfCostOfAllClusteringNodes))
 	logger.Println("value of ti : ", ti)
-	if ti == 0 {
+	if ti <= 0 {
 		ti = 1
-	} else if ti >= currMLLen {
-		ti = currMLLen - 1
+	} else if ti > currMLLen-NumClusters-2 {
+		ti = currMLLen - NumClusters - 2
+		if ti <= 0 {
+			ti = 1
+		}
 	}
 	logger.Println("updated value of ti : ", ti)
 	// ti = 4
@@ -393,10 +397,12 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 	w := sampleuv.NewWeighted(mpProb, nil)
 	q_indexes := []int{}
 	qp := []Point{}
+	qp_nodes := []Node{}
 	for i := 0; i < ti; i++ {
 		index, _ := w.Take()
 		q_indexes = append(q_indexes, index)
 		qp = append(qp, data[index])
+		qp_nodes = append(qp_nodes, Nodelist[index])
 	}
 
 	wq := []float64{}
@@ -417,8 +423,13 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 
 	core := Coreset{}
 	coreset := qp
+	coresetRepresentNodes := qp_nodes
 	for _, point := range clusterresults.RepresentCenterPoints {
 		coreset = append(coreset, point)
+		coresetRepresentNodes = append(coresetRepresentNodes)
+	}
+	for _, n := range clusterresults.RepresentCenterNodes {
+		coresetRepresentNodes = append(coresetRepresentNodes, n)
 	}
 	weights := wq
 	wb := []float64{}
@@ -458,7 +469,7 @@ func IndividualKMeansClustering(Nodelist []Node, k int) Coreset {
 
 	core.Coreset = coreset
 	core.Weights = weights
-	core.CoresetNodes = clusterresults.RepresentCenterNodes
+	core.CoresetNodes = coresetRepresentNodes
 	core.Tempcluster = clusterresults.ClusterMaps
 
 	logger.Println("Resultant Local Coreset : ", core)
