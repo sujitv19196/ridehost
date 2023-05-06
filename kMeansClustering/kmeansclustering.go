@@ -8,7 +8,6 @@ import (
 
 	"github.com/muesli/clusters"
 	"github.com/muesli/kmeans"
-	"golang.org/x/exp/slices"
 	// "github.com/biogo/cluster/kmeans"
 )
 
@@ -49,12 +48,29 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 		nearestPointToCenter := Point{X: 0, Y: 0}
 		pointnode := Node{}
 		idxOfPoint := 0
-		min_dis := 96789056.0
+		min_dis := 999999999.0
+		indexes_visited := make(map[int]int, len(data))
+		for i := 0; i < len(data); i++ {
+			indexes_visited[i] = 0
+		}
 		for _, obs := range c.Observations {
 			p := Point{X: obs.Coordinates()[0], Y: obs.Coordinates()[1]}
 			// logger.Println("data : ", data)
 			// logger.Println("p : ", p)
-			idxOfPoint = slices.Index(data, p)
+			// indexes := make([]int, 0)
+			for i, v := range data {
+				if v == p {
+					// indexes = append(indexes, i)
+					if indexes_visited[i] == 0 {
+						idxOfPoint = i
+						indexes_visited[i] = 1
+						break
+					}
+
+				}
+			}
+
+			// idxOfPoint = slices.Index(data, p)
 			cur_dis := euclideanDistance(p, centerPoint)
 			if cur_dis < min_dis {
 				min_dis = cur_dis
@@ -75,6 +91,7 @@ func CentralizedKMeansClustering(Nodelist []Node, k int) ClusterResult {
 	}
 	// fmt.Println("centroids", centroids)
 	// fmt.Println("pointclusters", pointclusters)
+	logger.Println("clusterMaps : ", clusterMaps)
 	clusterresult := ClusterResult{}
 	clusterresult.Centroids = centroids
 	clusterresult.Clusters = pointclusters
