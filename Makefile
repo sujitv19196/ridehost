@@ -1,11 +1,9 @@
 build:
-	go build -o ./introducer introducer/introducer.go
-	go build -o ./client client/client.go
-	# go build -o ./clusteringNode clusteringNode/clusteringNode.go
-	go build -o ./mainClusterer mainClusterer/mainClusterer.go
+	go build -o ./introducer cmd/introducer/introducer.go
+	go build -o ./client cmd/client/client.go
+	go build -o ./mainClusterer cmd/mainClusterer/mainClusterer.go
 
 clean: 
-	rm client/client
-	rm introducer/introducer
-	rm clusteringNode/clusteringNode
-	rm mainClusterer/mainClusterer
+	rm cmd/client/client
+	rm cmd/introducer/introducer
+	rm cmd/mainClusterer/mainClusterer

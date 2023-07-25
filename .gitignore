@@ -6,3 +6,7 @@ mainClusterer/mainClusterer
 test_client/test_client
 clusteringNode/clusteringNode
 output.log
+client 
+introducer
+mainClusterer
+test/testdata/data
