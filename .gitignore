@@ -1,12 +1,4 @@
-client/client
-cll/cll
-constants/constants
-introducer/introducer
-mainClusterer/mainClusterer
-test_client/test_client
-clusteringNode/clusteringNode
 output.log
-client 
-introducer
-mainClusterer
-test/testdata/data
+/client 
+/introducer
+/mainClusterer
